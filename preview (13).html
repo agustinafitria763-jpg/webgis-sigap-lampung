@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIGAP Lampung - WebGIS Kebencanaan</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Segoe UI,sans-serif;
+}
+
+body{
+background:#0b1220;
+overflow:hidden;
+}
+
+/* LOGIN */
+
+#loginPage{
+position:fixed;
+inset:0;
+display:flex;
+justify-content:center;
+align-items:center;
+background:linear-gradient(135deg,#08111f,#12243c);
+z-index:9999;
+}
+
+.login-box{
+width:430px;
+background:#101b2d;
+padding:35px;
+border-radius:22px;
+text-align:center;
+box-shadow:0 0 30px rgba(0,0,0,.5);
+color:white;
+}
+
+.logo-group{
+display:flex;
+justify-content:center;
+gap:15px;
+margin-bottom:15px;
+}
+
+.logo-group img{
+width:80px;
+height:80px;
+object-fit:contain;
+background:white;
+padding:5px;
+border-radius:15px;
+}
+
+.login-box h1{
+font-size:28px;
+margin-bottom:10px;
+}
+
+.login-box p{
+color:#cbd5e1;
+line-height:1.7;
+margin-bottom:18px;
+}
+
+.login-box input{
+width:100%;
+padding:14px;
+margin-top:12px;
+border:none;
+border-radius:12px;
+background:#1b2a44;
+color:white;
+}
+
+.login-box button{
+width:100%;
+padding:14px;
+margin-top:20px;
+border:none;
+border-radius:12px;
+background:#2563eb;
+color:white;
+font-size:16px;
+font-weight:bold;
+cursor:pointer;
+}
+
+.login-box button:hover{
+background:#1d4ed8;
+}
+
+.produksi{
+margin-top:20px;
+font-size:13px;
+line-height:1.8;
+color:#94a3b8;
+}
+
+/* APP */
+
+#app{
+display:none;
+width:100%;
+height:100vh;
+grid-template-columns:350px 1fr 370px;
+grid-template-rows:70px 1fr;
+grid-template-areas:
+"top top top"
+"left center right";
+}
+
+/* TOPBAR */
+
+.topbar{
+grid-area:top;
+background:#0f172a;
+border-bottom:1px solid #1e293b;
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:0 20px;
+color:white;
+}
+
+.brand{
+display:flex;
+align-items:center;
+gap:12px;
+font-size:24px;
+font-weight:bold;
+}
+
+.brand img{
+width:42px;
+height:42px;
+background:white;
+padding:4px;
+border-radius:10px;
+}
+
+.top-actions button{
+padding:10px 15px;
+border:none;
+border-radius:10px;
+background:#1e293b;
+color:white;
+margin-left:10px;
+cursor:pointer;
+}
+
+.top-actions button:hover{
+background:#2563eb;
+}
+
+/* SIDEBAR */
+
+.sidebar{
+grid-area:left;
+background:#0f172a;
+color:white;
+padding:15px;
+overflow:auto;
+border-right:1px solid #1e293b;
+}
+
+/* MAP */
+
+#map{
+grid-area:center;
+width:100%;
+height:100%;
+}
+
+/* RIGHTBAR */
+
+.rightbar{
+grid-area:right;
+background:#0f172a;
+color:white;
+padding:15px;
+overflow:auto;
+border-left:1px solid #1e293b;
+}
+
+.panel{
+background:#172338;
+padding:15px;
+border-radius:16px;
+margin-bottom:15px;
+}
+
+.panel h3{
+margin-bottom:12px;
+color:#60a5fa;
+}
+
+.layer-item{
+padding:10px;
+background:#1e293b;
+border-radius:10px;
+margin-bottom:8px;
+font-size:14px;
+}
+
+.layer-item input{
+margin-right:8px;
+}
+
+.opacity-slider{
+width:100%;
+margin-top:5px;
+}
+
+.legend-item{
+display:flex;
+align-items:center;
+gap:10px;
+margin-bottom:8px;
+}
+
+.legend-color{
+width:20px;
+height:20px;
+border-radius:5px;
+}
+
+.search-box input{
+width:100%;
+padding:12px;
+border:none;
+border-radius:10px;
+background:#1e293b;
+color:white;
+margin-bottom:15px;
+}
+
+.tool-btn{
+width:100%;
+padding:12px;
+margin-top:8px;
+border:none;
+border-radius:10px;
+background:#1e293b;
+color:white;
+cursor:pointer;
+}
+
+.tool-btn:hover{
+background:#2563eb;
+}
+
+.stat{
+display:flex;
+justify-content:space-between;
+margin-bottom:8px;
+}
+
+/* POPUP */
+
+.leaflet-popup-content-wrapper{
+background:#111827;
+color:white;
+}
+
+.leaflet-popup-tip{
+background:#111827;
+}
+
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+
+<div id="loginPage">
+
+<div class="login-box">
+
+<div class="logo-group">
+<img src="Foto1.png">
+<img src="Foto4.png">
+</div>
+
+<h1>SIGAP LAMPUNG</h1>
+
+<p>
+Sistem Informasi Geospasial Kebencanaan
+Bandar Lampung
+</p>
+
+<input type="text" id="username" placeholder="Username">
+<input type="password" id="password" placeholder="Password">
+
+<button onclick="login()">Masuk Dashboard</button>
+
+<div class="produksi">
+WebGIS Kebencanaan Bandar Lampung 2026<br>
+Produksi Mahasiswa Pendidikan Geografi<br>
+Universitas Lampung
+</div>
+
+</div>
+</div>
+
+<!-- APP -->
+
+<div id="app">
+
+<!-- TOPBAR -->
+
+<div class="topbar">
+
+<div class="brand">
+<img src="Foto1.png">
+SIGAP-LAMPUNG
+</div>
+
+<div class="top-actions">
+<button onclick="showAllLayers()">Semua Layer</button>
+<button onclick="downloadData()">Unduh JSON</button>
+<button onclick="alert('Dashboard aktif')">Dashboard</button>
+<button onclick="alert('Laporan aktif')">Lapor</button>
+</div>
+
+</div>
+
+<!-- SIDEBAR -->
+
+<div class="sidebar">
+
+<div class="search-box">
+<input type="text" id="searchInput" placeholder="Cari wilayah...">
+</div>
+
+<!-- ZONA -->
+
+<div class="panel">
+
+<h3>⚠️ Zona Bahaya</h3>
+
+<div class="layer-item">
+<input type="checkbox" checked> Semua
+</div>
+
+<div class="layer-item">
+<input type="checkbox" checked> Banjir
+<input type="range" class="opacity-slider" min="0" max="1" step="0.1" value="0.7">
+</div>
+
+<div class="layer-item">
+<input type="checkbox" checked> Tanah Longsor
+<input type="range" class="opacity-slider" min="0" max="1" step="0.1" value="0.7">
+</div>
+
+<div class="layer-item">
+<input type="checkbox" checked> Banjir Bandang
+<input type="range" class="opacity-slider" min="0" max="1" step="0.1" value="0.7">
+</div>
+
+<div class="layer-item">
+<input type="checkbox" checked> Cuaca Ekstrem
+<input type="range" class="opacity-slider" min="0" max="1" step="0.1" value="0.7">
+</div>
+
+</div>
+
+<!-- TRANSPORTASI -->
+
+<div class="panel">
+
+<h3>🚦 Transportasi</h3>
+
+<div class="layer-item">Jaringan Jalan</div>
+<div class="layer-item">Rel Kereta Api</div>
+<div class="layer-item">Jembatan (519)</div>
+<div class="layer-item">Terminal Bus (4)</div>
+<div class="layer-item">Pelabuhan (2)</div>
+<div class="layer-item">Stasiun KA (2)</div>
+
+</div>
+
+<!-- ENERGI -->
+
+<div class="panel">
+
+<h3>⚡ Energi & Utilitas</h3>
+
+<div class="layer-item">Kantor PLN (3)</div>
+<div class="layer-item">Gardu Listrik (2)</div>
+<div class="layer-item">SPBU (25)</div>
+<div class="layer-item">Menara BTS (213)</div>
+
+</div>
+
+<!-- KESEHATAN -->
+
+<div class="panel">
+
+<h3>🏥 Kesehatan</h3>
+
+<div class="layer-item">Rumah Sakit (24)</div>
+<div class="layer-item">Puskesmas (31)</div>
+<div class="layer-item">Klinik (31)</div>
+
+</div>
+
+<!-- FASILITAS -->
+
+<div class="panel">
+
+<h3>🏛 Fasilitas Umum</h3>
+
+<div class="layer-item">Pemerintahan (184)</div>
+<div class="layer-item">Pendidikan (362)</div>
+<div class="layer-item">PDAM (1)</div>
+
+</div>
+
+<!-- BASEMAP -->
+
+<div class="panel">
+
+<h3>🗺️ Basemap</h3>
+
+<button class="tool-btn" onclick="setDarkMap()">🌙 Dark</button>
+<button class="tool-btn" onclick="setOSM()">🗺️ OpenStreetMap</button>
+<button class="tool-btn" onclick="setSatellite()">🛰️ Satelit</button>
+<button class="tool-btn" onclick="setTopo()">⛰️ Topografi</button>
+<button class="tool-btn" onclick="setStreet()">🏙️ Street</button>
+
+</div>
+
+<!-- LEGENDA -->
+
+<div class="panel">
+
+<h3>Legenda</h3>
+
+<div class="legend-item">
+<div class="legend-color" style="background:red"></div>
+Tinggi
+</div>
+
+<div class="legend-item">
+<div class="legend-color" style="background:orange"></div>
+Sedang
+</div>
+
+<div class="legend-item">
+<div class="legend-color" style="background:yellow"></div>
+Rendah
+</div>
+
+</div>
+
+<!-- TOOLS -->
+
+<div class="panel">
+
+<h3>🧰 Alat Analisis</h3>
+
+<button class="tool-btn" onclick="alert('Ukur jarak aktif')">📏 Ukur Jarak</button>
+
+<button class="tool-btn" onclick="alert('Ukur luas aktif')">📐 Ukur Luas</button>
+
+<button class="tool-btn" onclick="alert('Pengukuran dihapus')">🗑️ Hapus</button>
+
+<button class="tool-btn" onclick="downloadData()">⬇️ Unduh JSON</button>
+
+</div>
+
+</div>
+
+<!-- MAP -->
+
+<div id="map"></div>
+
+<!-- RIGHTBAR -->
+
+<div class="rightbar">
+
+<div class="panel">
+
+<h3>Statistik Inventarisasi</h3>
+
+<div class="stat">
+<span>Indeks Bahaya</span>
+<span>Tinggi</span>
+</div>
+
+<div class="stat">
+<span>Zona Tinggi</span>
+<span>412</span>
+</div>
+
+<div class="stat">
+<span>Wilayah</span>
+<span>Bandar Lampung</span>
+</div>
+
+</div>
+
+<div class="panel">
+
+<h3>Analisis Kerusakan</h3>
+
+<div class="stat">
+<span>Rusak Berat</span>
+<span>127</span>
+</div>
+
+<div class="stat">
+<span>Rusak Sedang</span>
+<span>284</span>
+</div>
+
+<div class="stat">
+<span>Rusak Ringan</span>
+<span>512</span>
+</div>
+
+<div class="stat">
+<span>Total</span>
+<span>923</span>
+</div>
+
+</div>
+
+<div class="panel">
+
+<h3>Kontak Darurat</h3>
+
+<p>🚨 BPBD : 117</p>
+<p>📞 (0721) 261813</p>
+<p>⚡ PLN : 123</p>
+<p>🔥 Damkar : 113</p>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+/* LOGIN */
+
+function login(){
+
+let u=document.getElementById('username').value;
+let p=document.getElementById('password').value;
+
+if(u==='admin' && p==='admin123'){
+
+document.getElementById('loginPage').style.display='none';
+document.getElementById('app').style.display='grid';
+
+setTimeout(()=>{
+map.invalidateSize();
+},300);
+
+}else{
+
+alert('Username atau Password salah');
+
+}
+}
+
+/* MAP */
+
+let map = L.map('map').setView([-5.429,105.261],11);
+
+/* BASEMAP */
+
+let darkLayer = L.tileLayer(
+'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+);
+
+let osmLayer = L.tileLayer(
+'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+);
+
+let satelliteLayer = L.tileLayer(
+'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+);
+
+let topoLayer = L.tileLayer(
+'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'
+);
+
+let streetLayer = L.tileLayer(
+'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png'
+);
+
+let currentBase = darkLayer.addTo(map);
+
+function changeBase(layer){
+
+map.removeLayer(currentBase);
+currentBase = layer;
+map.addLayer(currentBase);
+
+}
+
+function setDarkMap(){changeBase(darkLayer)}
+function setOSM(){changeBase(osmLayer)}
+function setSatellite(){changeBase(satelliteLayer)}
+function setTopo(){changeBase(topoLayer)}
+function setStreet(){changeBase(streetLayer)}
+
+/* GEOJSON */
+
+function getColor(level){
+
+if(level==='Tinggi') return '#ff0000';
+if(level==='Sedang') return '#ff9900';
+
+return '#ffff00';
+
+}
+
+let hazardLayer;
+
+fetch('DATA BAHAYA.geojson')
+
+.then(res=>res.json())
+
+.then(data=>{
+
+hazardLayer = L.geoJSON(data,{
+
+style:function(feature){
+
+let level = feature.properties.KELAS ||
+feature.properties.level ||
+'Rendah';
+
+return{
+
+color:getColor(level),
+fillColor:getColor(level),
+weight:1,
+fillOpacity:0.7
+
+}
+
+},
+
+onEachFeature:function(feature,layer){
+
+let nama = feature.properties.NAMA ||
+feature.properties.nama ||
+'Zona';
+
+let level = feature.properties.KELAS ||
+feature.properties.level ||
+'Rendah';
+
+layer.bindPopup(
+'<b>'+nama+'</b><br>'+
+'Tingkat Bahaya : '+level
+);
+
+}
+
+}).addTo(map);
+
+map.fitBounds(hazardLayer.getBounds());
+
+});
+
+/* INFRA */
+
+let infra = [
+
+['Rumah Sakit',-5.42,105.25],
+['Terminal',-5.41,105.28],
+['SPBU',-5.44,105.30],
+['Pelabuhan',-5.46,105.31],
+['Puskesmas',-5.43,105.22]
+
+];
+
+infra.forEach(d=>{
+
+L.marker([d[1],d[2]])
+.addTo(map)
+.bindPopup('<b>'+d[0]+'</b>');
+
+});
+
+/* SEARCH */
+
+document.getElementById('searchInput')
+
+.addEventListener('keyup',function(e){
+
+let key = e.target.value.toLowerCase();
+
+if(!hazardLayer) return;
+
+hazardLayer.eachLayer(function(layer){
+
+let nama = (
+layer.feature.properties.NAMA ||
+layer.feature.properties.nama ||
+''
+).toLowerCase();
+
+if(nama.includes(key)){
+
+map.fitBounds(layer.getBounds());
+
+layer.openPopup();
+
+}
+
+});
+
+});
+
+/* FUNCTIONS */
+
+function showAllLayers(){
+
+alert('Semua layer aktif');
+
+}
+
+function downloadData(){
+
+window.open('DATA BAHAYA.geojson');
+
+}
+
+</script>
+
+</body>
+</html>

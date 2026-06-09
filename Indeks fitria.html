@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>SIGAP WEBGIS</title>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+
+html,body{
+height:100%;
+margin:0;
+padding:0;
+font-family:Arial,sans-serif;
+}
+
+#map{
+width:100%;
+height:100vh;
+}
+
+.sidebar{
+position:absolute;
+top:10px;
+left:10px;
+z-index:1000;
+background:white;
+padding:15px;
+width:300px;
+max-height:90vh;
+overflow:auto;
+border-radius:10px;
+box-shadow:0 0 10px rgba(0,0,0,.3);
+}
+
+.sidebar h2{
+margin-top:0;
+}
+
+.sidebar label{
+display:block;
+margin:5px 0;
+font-size:14px;
+}
+
+hr{
+margin:15px 0;
+}
+
+table{
+font-size:12px;
+border-collapse:collapse;
+}
+
+td{
+padding:3px 5px;
+border-bottom:1px solid #ddd;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="sidebar">
+
+<h2>SIGAP WEBGIS</h2>
+
+<h3>Bahaya Bencana</h3>
+<div id="hazardList"></div>
+
+<hr>
+
+<h3>Infrastruktur Kritis</h3>
+<div id="infraList"></div>
+
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+
+const map = L.map('map').setView([-5.42,105.27],10);
+
+L.tileLayer(
+'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+{
+attribution:'© OpenStreetMap'
+}
+).addTo(map);
+
+const layers = {};
+
+function popupContent(properties){
+
+let html="<table>";
+
+for(let key in properties){
+
+html += `
+<tr>
+<td><b>${key}</b></td>
+<td>${properties[key]}</td>
+</tr>
+`;
+
+}
+
+html += "</table>";
+
+return html;
+
+}
+
+function addLayer(name,path,color,targetDiv){
+
+fetch(path)
+.then(response => response.json())
+.then(data => {
+
+const layer = L.geoJSON(data,{
+
+style:function(feature){
+
+return{
+color:color,
+weight:2,
+fillColor:color,
+fillOpacity:0.4
+};
+
+},
+
+pointToLayer:function(feature,latlng){
+
+return L.circleMarker(latlng,{
+radius:6,
+fillColor:color,
+color:"#ffffff",
+weight:1,
+fillOpacity:1
+});
+
+},
+
+onEachFeature:function(feature,layer){
+
+if(feature.properties){
+
+layer.bindPopup(
+`<h4>${name}</h4>`+
+popupContent(feature.properties)
+);
+
+}
+
+}
+
+});
+
+layers[name]=layer;
+
+layer.addTo(map);
+
+const container =
+document.getElementById(targetDiv);
+
+const label =
+document.createElement("label");
+
+label.innerHTML =
+`<input type="checkbox" checked> ${name}`;
+
+container.appendChild(label);
+
+label.querySelector("input")
+.addEventListener("change",function(){
+
+if(this.checked){
+map.addLayer(layer);
+}else{
+map.removeLayer(layer);
+}
+
+});
+
+})
+.catch(error=>{
+
+console.error(
+"Gagal memuat:",
+path,
+error
+);
+
+});
+
+}
+
+/* =========================
+   BAHAYA BENCANA
+========================= */
+
+addLayer(
+"Banjir",
+"Dat abahaya bencana/Bahaya_Banjir_Fix.geojson",
+"#2196f3",
+"hazardList"
+);
+
+addLayer(
+"Banjir Bandang",
+"Dat abahaya bencana/Bahaya_BanjirBandang_Fix.geojson",
+"#0d47a1",
+"hazardList"
+);
+
+addLayer(
+"Cuaca Ekstrem",
+"Dat abahaya bencana/Bahaya_CuacaEkstream_Fix.geojson",
+"#ff9800",
+"hazardList"
+);
+
+addLayer(
+"Tanah Longsor",
+"Dat abahaya bencana/Bahaya_TanahLongsor_Fix.geojson",
+"#d32f2f",
+"hazardList"
+);
+
+/* =========================
+   INFRASTRUKTUR KRITIS
+========================= */
+
+addLayer(
+"Gardu Listrik",
+"infrastruktur kritis/GarduListrik.geojson",
+"#FFD700",
+"infraList"
+);
+
+addLayer(
+"Jalan",
+"infrastruktur kritis/Jalan.geojson",
+"#444444",
+"infraList"
+);
+
+addLayer(
+"Jembatan",
+"infrastruktur kritis/Jembatan.geojson",
+"#8e44ad",
+"infraList"
+);
+
+addLayer(
+"Kantor PLN",
+"infrastruktur kritis/KantorPLN.geojson",
+"#ffcc00",
+"infraList"
+);
+
+addLayer(
+"Klinik",
+"infrastruktur kritis/Klinik.geojson",
+"#00c853",
+"infraList"
+);
+
+addLayer(
+"Menara Telepon",
+"infrastruktur kritis/MeanaraTelepon.geojson",
+"#9c27b0",
+"infraList"
+);
+
+addLayer(
+"Pelabuhan",
+"infrastruktur kritis/Pelabuhan.geojson",
+"#1565c0",
+"infraList"
+);
+
+addLayer(
+"Pemerintahan",
+"infrastruktur kritis/Pemerintahan.geojson",
+"#e53935",
+"infraList"
+);
+
+addLayer(
+"Pendidikan",
+"infrastruktur kritis/Pendidikan.geojson",
+"#ec407a",
+"infraList"
+);
+
+addLayer(
+"Puskesmas",
+"infrastruktur kritis/pusekesmas.geojson",
+"#00897b",
+"infraList"
+);
+
+addLayer(
+"Rel Kereta Api",
+"infrastruktur kritis/RelKA.geojson",
+"#616161",
+"infraList"
+);
+
+addLayer(
+"Rumah Sakit",
+"infrastruktur kritis/RumahSakit.geojson",
+"#d50000",
+"infraList"
+);
+
+addLayer(
+"SPBU",
+"infrastruktur kritis/SPBU.geojson",
+"#fb8c00",
+"infraList"
+);
+
+addLayer(
+"Stasiun KA",
+"infrastruktur kritis/StasiunKA.geojson",
+"#1e88e5",
+"infraList"
+);
+
+addLayer(
+"Terminal Bus",
+"infrastruktur kritis/TerminalBus.geojson",
+"#43a047",
+"infraList"
+);
+
+/* Zoom otomatis */
+
+setTimeout(function(){
+
+let group=[];
+
+for(let key in layers){
+group.push(layers[key]);
+}
+
+if(group.length>0){
+
+const fg=L.featureGroup(group);
+
+try{
+map.fitBounds(fg.getBounds());
+}catch(e){}
+
+}
+
+},4000);
+
+</script>
+
+</body>
+</html>

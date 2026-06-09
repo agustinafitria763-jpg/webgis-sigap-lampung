@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>SIGAP WEBGIS</title>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+
+html,body{
+margin:0;
+padding:0;
+height:100%;
+font-family:Arial,sans-serif;
+}
+
+#map{
+width:100%;
+height:100vh;
+}
+
+.sidebar{
+position:absolute;
+top:10px;
+left:10px;
+z-index:1000;
+background:white;
+padding:15px;
+width:320px;
+max-height:90vh;
+overflow:auto;
+border-radius:10px;
+box-shadow:0 0 10px rgba(0,0,0,.3);
+}
+
+.sidebar h2{
+margin-top:0;
+}
+
+.sidebar label{
+display:block;
+margin-bottom:5px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="sidebar">
+
+<h2>SIGAP WEBGIS</h2>
+
+<h3>Bahaya Bencana</h3>
+<div id="hazardList"></div>
+
+<hr>
+
+<h3>Infrastruktur Kritis</h3>
+<div id="infraList"></div>
+
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+
+const map=L.map('map').setView([-5.42,105.26],11);
+
+L.tileLayer(
+'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+{
+attribution:'© OpenStreetMap'
+}
+).addTo(map);
+
+const allLayers=[];
+
+function addLayer(nama,file,warna,target){
+
+fetch(file)
+.then(r=>r.json())
+.then(data=>{
+
+const layer=L.geoJSON(data,{
+
+style:{
+color:warna,
+weight:2,
+fillColor:warna,
+fillOpacity:0.4
+},
+
+pointToLayer:(f,ll)=>L.circleMarker(ll,{
+radius:6,
+fillColor:warna,
+color:'#fff',
+weight:1,
+fillOpacity:1
+})
+
+});
+
+layer.addTo(map);
+
+allLayers.push(layer);
+
+const label=document.createElement('label');
+
+label.innerHTML=
+`<input type="checkbox" checked> ${nama}`;
+
+document
+.getElementById(target)
+.appendChild(label);
+
+label.querySelector('input')
+.addEventListener('change',function(){
+
+if(this.checked){
+map.addLayer(layer);
+}else{
+map.removeLayer(layer);
+}
+
+});
+
+})
+.catch(err=>console.log(file,err));
+
+}
+
+/* =====================
+   BAHAYA BENCANA
+===================== */
+
+addLayer(
+'Banjir',
+'Dat abahaya bencana/Bahaya_Banjir_Fix.geojson',
+'#2196f3',
+'hazardList'
+);
+
+addLayer(
+'Banjir Bandang',
+'Dat abahaya bencana/Bahaya_BanjirBandang_Fix.geojson',
+'#0d47a1',
+'hazardList'
+);
+
+addLayer(
+'Cuaca Ekstrem',
+'Dat abahaya bencana/Bahaya_CuacaEkstream_Fix.geojson',
+'#ff9800',
+'hazardList'
+);
+
+addLayer(
+'Tanah Longsor',
+'Dat abahaya bencana/Bahaya_TanahLongsor_Fix.geojson',
+'#d32f2f',
+'hazardList'
+);
+
+/* =====================
+   INFRASTRUKTUR KRITIS
+===================== */
+
+addLayer(
+'Gardu Listrik',
+'Insfratukrur kritis/GarduListrik.geojson',
+'#FFD700',
+'infraList'
+);
+
+addLayer(
+'Jalan',
+'Insfratukrur kritis/Jalan.geojson',
+'#444444',
+'infraList'
+);
+
+addLayer(
+'Jembatan',
+'Insfratukrur kritis/Jembatan.geojson',
+'#8e44ad',
+'infraList'
+);
+
+addLayer(
+'Kantor PLN',
+'Insfratukrur kritis/KantorPLN.geojson',
+'#ffcc00',
+'infraList'
+);
+
+addLayer(
+'Klinik',
+'Insfratukrur kritis/Klinik.geojson',
+'#00c853',
+'infraList'
+);
+
+addLayer(
+'Menara Telepon',
+'Insfratukrur kritis/MeanaraTelepon.geojson',
+'#9c27b0',
+'infraList'
+);
+
+addLayer(
+'PDAM',
+'Insfratukrur kritis/PDAM.geojson',
+'#00b0ff',
+'infraList'
+);
+
+addLayer(
+'Pelabuhan',
+'Insfratukrur kritis/Pelabuhan.geojson',
+'#1565c0',
+'infraList'
+);
+
+addLayer(
+'Pemerintahan',
+'Insfratukrur kritis/Pemerintahan.geojson',
+'#e53935',
+'infraList'
+);
+
+addLayer(
+'Pendidikan',
+'Insfratukrur kritis/Pendidikan.geojson',
+'#ec407a',
+'infraList'
+);
+
+addLayer(
+'Puskesmas',
+'Insfratukrur kritis/pusekesmas.geojson',
+'#00897b',
+'infraList'
+);
+
+addLayer(
+'Rel KA',
+'Insfratukrur kritis/RelKA.geojson',
+'#616161',
+'infraList'
+);
+
+addLayer(
+'Rumah Sakit',
+'Insfratukrur kritis/RumahSakit.geojson',
+'#d50000',
+'infraList'
+);
+
+addLayer(
+'SPBU',
+'Insfratukrur kritis/SPBU.geojson',
+'#fb8c00',
+'infraList'
+);
+
+addLayer(
+'Stasiun KA',
+'Insfratukrur kritis/StasiunKA.geojson',
+'#1e88e5',
+'infraList'
+);
+
+addLayer(
+'Terminal Bus',
+'Insfratukrur kritis/TerminalBus.geojson',
+'#43a047',
+'infraList'
+);
+
+setTimeout(()=>{
+
+if(allLayers.length){
+
+const fg=L.featureGroup(allLayers);
+
+try{
+map.fitBounds(fg.getBounds());
+}catch(e){}
+
+}
+
+},3000);
+
+</script>
+
+</body>
+</html>

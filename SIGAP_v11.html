@@ -1,0 +1,2506 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIGAP — Sistem Informasi Geospasial Ancaman & Infrastruktur Kritis Bandar Lampung</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<!-- Professional Formal Fonts: IBM Plex Sans (simetris, formal, enterprise-grade) -->
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Serif:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* =============================================
+   DESIGN TOKENS & RESET
+============================================= */
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  /* Core palette */
+  --white:#ffffff;
+  --ink:#0b1523;
+  --ink2:#1c2d40;
+  --muted:#5a7a94;
+  --muted2:#8aabb8;
+  --line:#d4e4ed;
+  --line2:#edf5f9;
+  --bg:#f2f8fb;
+  /* Brand accents */
+  --teal:#0b7a8a;
+  --teal-mid:#0d9aae;
+  --teal-light:#e0f7fa;
+  --teal-dark:#065a67;
+  --amber:#c9880a;
+  --amber-light:#fff8e7;
+  --amber-glow:#f5c842;
+  --red:#c23b2a;
+  --red-light:#fdecea;
+  --orange:#d96820;
+  --orange-light:#fff1e6;
+  --green:#0b7a5a;
+  --green-light:#e4f9f3;
+  --purple:#5a3fa0;
+  --purple-light:#f0ebff;
+  /* Gradients */
+  --g-hero:linear-gradient(140deg,#040e18 0%,#072437 35%,#0b7a8a 70%,#c9880a 100%);
+  --g-teal:linear-gradient(135deg,#0b7a8a,#0d9aae);
+  --g-amber:linear-gradient(135deg,#c9880a,#f5c842);
+  --g-danger:linear-gradient(135deg,#c23b2a,#e55042);
+  --g-success:linear-gradient(135deg,#0b7a5a,#12a67a);
+  /* Radius & shadow */
+  --r:8px;--r-lg:14px;--r-xl:18px;--r-2xl:26px;
+  --sh-sm:0 2px 8px rgba(7,36,55,0.07);
+  --sh:0 6px 24px rgba(7,36,55,0.10);
+  --sh-lg:0 18px 54px rgba(7,36,55,0.15);
+  --sh-teal:0 8px 32px rgba(11,122,138,0.22);
+  --t:0.22s cubic-bezier(0.4,0,0.2,1);
+  --nav-h:60px;
+}
+html{scroll-behavior:smooth;}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px;}
+img{max-width:100%;}
+input,select,textarea,button{font-family:'IBM Plex Sans',sans-serif;}
+
+/* =============================================
+   LOADER
+============================================= */
+#loader{
+  position:fixed;inset:0;z-index:9999;
+  background:var(--white);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;
+  transition:opacity 0.5s ease;
+}
+#loader.out{opacity:0;pointer-events:none;}
+.ld-brand{display:flex;align-items:center;gap:13px;}
+.ld-icon{
+  width:44px;height:44px;border-radius:10px;
+  background:var(--g-teal);
+  display:flex;align-items:center;justify-content:center;
+  color:white;font-size:20px;box-shadow:var(--sh-teal);
+}
+.ld-text{font-family:'IBM Plex Serif',serif;font-size:20px;font-weight:700;color:var(--ink);letter-spacing:-0.3px;}
+.ld-bar-wrap{width:200px;height:2px;background:var(--line);border-radius:2px;overflow:hidden;}
+.ld-prog{height:100%;background:var(--g-amber);border-radius:2px;animation:ldprog 1.5s ease-out forwards;}
+@keyframes ldprog{0%{width:0}60%{width:80%}100%{width:100%}}
+.ld-sub{font-size:12px;color:var(--muted2);font-family:'IBM Plex Mono',monospace;letter-spacing:0.3px;}
+
+/* =============================================
+   NAVBAR
+============================================= */
+.navbar{
+  position:fixed;top:0;left:0;right:0;z-index:1000;
+  height:var(--nav-h);
+  background:rgba(255,255,255,0.97);
+  border-bottom:1px solid rgba(212,228,237,0.9);
+  display:flex;align-items:center;
+  padding:0 28px;gap:0;
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  box-shadow:0 2px 14px rgba(7,36,55,0.05);
+}
+.nb-brand{display:flex;align-items:center;gap:10px;cursor:pointer;flex-shrink:0;margin-right:28px;text-decoration:none;}
+.nb-icon{width:30px;height:30px;border-radius:7px;background:var(--g-teal);display:flex;align-items:center;justify-content:center;color:white;font-size:13px;font-weight:700;flex-shrink:0;}
+.nb-brand-name{font-family:'IBM Plex Serif',serif;font-size:14px;font-weight:700;color:var(--ink);letter-spacing:-0.2px;line-height:1.2;}
+.nb-brand-sub{font-size:10px;color:var(--muted2);letter-spacing:0.2px;}
+.nb-sep{width:1px;height:18px;background:var(--line);margin-right:22px;flex-shrink:0;}
+.nb-nav{display:flex;align-items:center;gap:2px;flex:1;}
+.nb-link{
+  padding:6px 13px;border-radius:7px;
+  font-size:12.5px;font-weight:500;color:var(--muted);
+  background:none;border:none;cursor:pointer;
+  transition:var(--t);white-space:nowrap;
+  display:flex;align-items:center;gap:5px;letter-spacing:0.1px;
+}
+.nb-link:hover{color:var(--ink);background:var(--line2);}
+.nb-link.active{color:var(--teal);font-weight:600;background:var(--teal-light);}
+.nb-right{display:flex;align-items:center;gap:9px;flex-shrink:0;}
+.nb-status{
+  display:flex;align-items:center;gap:6px;
+  padding:5px 10px;border-radius:6px;
+  background:var(--green-light);
+  font-size:11px;font-weight:600;color:var(--green);
+  font-family:'IBM Plex Mono',monospace;
+}
+.nb-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2.4s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.nb-login{
+  padding:7px 16px;border-radius:8px;
+  font-size:12.5px;font-weight:600;
+  border:1.5px solid var(--teal);
+  background:var(--teal-light);color:var(--teal);
+  cursor:pointer;transition:var(--t);
+  display:flex;align-items:center;gap:6px;
+}
+.nb-login:hover{background:var(--teal);color:white;border-color:var(--teal);}
+.nb-lapor{
+  padding:7px 16px;border-radius:8px;
+  font-size:12.5px;font-weight:600;
+  background:var(--g-danger);color:white;
+  border:none;cursor:pointer;transition:var(--t);
+  display:flex;align-items:center;gap:6px;
+  box-shadow:0 2px 10px rgba(194,59,42,0.3);
+}
+.nb-lapor:hover{box-shadow:0 4px 16px rgba(194,59,42,0.45);transform:translateY(-1px);}
+
+/* =============================================
+   PAGES
+============================================= */
+.page{display:none;min-height:100vh;padding-top:var(--nav-h);}
+.page.active{display:block;}
+
+/* =============================================
+   HERO
+============================================= */
+.hero{
+  background:var(--g-hero);
+  padding:90px 40px 80px;
+  position:relative;overflow:hidden;
+}
+.hero::before{
+  content:'';position:absolute;inset:0;
+  background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.015'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E");
+  pointer-events:none;
+}
+.hero::after{
+  content:'';position:absolute;right:-220px;bottom:-120px;
+  width:720px;height:720px;
+  background:radial-gradient(circle,rgba(201,136,10,0.16) 0%,transparent 65%);
+  pointer-events:none;
+}
+.hero-inner{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:1.15fr 0.85fr;gap:70px;align-items:center;}
+.hero-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:11px;font-weight:600;color:rgba(147,197,253,0.9);
+  letter-spacing:2px;text-transform:uppercase;margin-bottom:18px;
+  font-family:'IBM Plex Mono',monospace;
+}
+.hero-eyebrow-line{width:22px;height:1px;background:rgba(147,197,253,0.6);}
+.hero-logos{display:flex;gap:14px;align-items:center;margin-bottom:22px;}
+.hero-logos img{height:42px;width:auto;filter:drop-shadow(0 2px 8px rgba(0,0,0,0.12));transition:var(--t);}
+.hero-logos img:hover{transform:translateY(-2px);}
+.hero-h1{
+  font-family:'IBM Plex Serif',serif;
+  font-size:clamp(34px,4.2vw,54px);
+  font-weight:800;
+  color:#ffffff;
+  line-height:1.08;
+  letter-spacing:-1px;
+  margin-bottom:18px;
+}
+.hero-h1 em{font-style:normal;color:var(--amber-glow);}
+.hero-h1 .hero-sub-title{
+  font-size:clamp(16px,2vw,24px);
+  font-weight:400;
+  color:rgba(180,205,220,0.75);
+  letter-spacing:0;display:block;margin-top:6px;
+}
+.hero-desc{
+  font-size:14.5px;color:rgba(190,215,228,0.85);
+  line-height:1.85;max-width:500px;margin-bottom:32px;
+  font-weight:300;
+}
+.hero-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.btn-primary{
+  padding:12px 28px;border-radius:10px;
+  background:var(--g-teal);color:white;
+  font-size:13.5px;font-weight:600;border:none;cursor:pointer;
+  transition:var(--t);display:flex;align-items:center;gap:7px;
+  box-shadow:var(--sh-teal);letter-spacing:0.2px;
+}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(11,122,138,0.42);}
+.btn-outline{
+  padding:12px 24px;border-radius:10px;
+  background:rgba(245,200,66,0.1);color:var(--amber-glow);
+  border:1.5px solid rgba(245,200,66,0.35);
+  font-size:13.5px;font-weight:600;cursor:pointer;
+  transition:var(--t);display:flex;align-items:center;gap:7px;
+  backdrop-filter:blur(8px);letter-spacing:0.2px;
+}
+.btn-outline:hover{background:rgba(245,200,66,0.2);border-color:rgba(245,200,66,0.65);}
+.hero-metrics{
+  margin-top:44px;
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:0;border-top:1px solid rgba(245,200,66,0.18);padding-top:28px;
+}
+.hm-item{padding-right:22px;border-right:1px solid rgba(245,200,66,0.12);}
+.hm-item:last-child{border-right:none;}
+.hm-val{
+  font-family:'IBM Plex Serif',serif;
+  font-size:29px;font-weight:700;color:#fff;line-height:1;margin-bottom:5px;letter-spacing:-1px;
+}
+.hm-label{font-size:11px;color:rgba(148,163,184,0.8);font-weight:400;}
+/* Hero right cards */
+.hero-cards{display:flex;flex-direction:column;gap:9px;}
+.hc-card{
+  background:rgba(0,25,45,0.3);
+  border:1px solid rgba(245,200,66,0.16);
+  border-radius:var(--r-xl);
+  padding:16px 18px;
+  display:flex;gap:14px;align-items:center;
+  transition:var(--t);cursor:pointer;
+  backdrop-filter:blur(10px);
+}
+.hc-card:hover{background:rgba(0,45,70,0.4);border-color:rgba(245,200,66,0.38);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.25);}
+.hc-badge{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.hc-val{font-family:'IBM Plex Serif',serif;font-size:21px;font-weight:700;color:#fff;line-height:1;letter-spacing:-0.5px;}
+.hc-lbl{font-size:11.5px;color:rgba(148,163,184,0.75);margin-top:2px;}
+.hc-trend{font-size:10.5px;font-weight:600;margin-top:3px;}
+.trend-up{color:#fca5a5;}
+.trend-stable{color:#86efac;}
+
+/* =============================================
+   SHARED SECTION
+============================================= */
+.section{padding:64px 40px;}
+.section-inner{max-width:1120px;margin:0 auto;}
+.sec-label{
+  font-size:10.5px;font-weight:700;color:var(--amber);
+  letter-spacing:2px;text-transform:uppercase;
+  margin-bottom:12px;display:flex;align-items:center;gap:8px;
+  font-family:'IBM Plex Mono',monospace;
+}
+.sec-label::before{content:'';width:16px;height:2px;background:var(--g-amber);border-radius:2px;}
+.sec-title{
+  font-family:'IBM Plex Serif',serif;
+  font-size:clamp(22px,2.8vw,34px);font-weight:800;
+  color:var(--ink);line-height:1.15;letter-spacing:-0.5px;margin-bottom:10px;
+}
+.sec-desc{font-size:14.5px;color:var(--muted);line-height:1.75;max-width:520px;font-weight:300;}
+
+/* =============================================
+   PENTAHELIX
+============================================= */
+.ph-section{background:linear-gradient(180deg,#fff 0%,#f2f8fb 100%);border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+.ph-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-xl);overflow:hidden;margin-top:40px;}
+.ph-item{background:white;padding:22px 18px;cursor:pointer;transition:var(--t);position:relative;}
+.ph-item:hover,.ph-item.active{background:var(--teal-light);}
+.ph-item.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--g-amber);border-radius:2px;}
+.ph-icon{font-size:20px;margin-bottom:10px;}
+.ph-title{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:3px;font-family:'IBM Plex Serif',serif;}
+.ph-role{font-size:11px;color:var(--muted);}
+.ph-content{margin-top:28px;display:none;}
+.ph-content.active{display:grid;grid-template-columns:1fr 1fr;gap:30px;align-items:start;}
+.ph-info h3{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:8px;font-family:'IBM Plex Serif',serif;}
+.ph-info p{font-size:13.5px;color:var(--muted);line-height:1.7;font-weight:300;}
+.ph-needs{margin-top:16px;display:flex;flex-direction:column;gap:8px;}
+.ph-need{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink);padding:10px 14px;border-radius:8px;background:var(--bg);border:1px solid var(--line);}
+.ph-need i{color:var(--teal);font-size:12px;flex-shrink:0;}
+.ph-feats{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.ph-feat{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;cursor:pointer;transition:var(--t);}
+.ph-feat:hover{background:white;box-shadow:var(--sh-sm);}
+.ph-feat-icon{font-size:17px;margin-bottom:8px;}
+.ph-feat-name{font-size:12.5px;font-weight:600;color:var(--ink);margin-bottom:3px;}
+.ph-feat-desc{font-size:11.5px;color:var(--muted);line-height:1.5;}
+
+/* =============================================
+   DASHBOARD SECTION
+============================================= */
+.dash-bg{background:linear-gradient(180deg,#f4faf8 0%,#ebf7f2 100%);border-top:1px solid var(--line);}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.kpi-card{
+  background:white;border:1px solid var(--line);border-radius:var(--r-xl);
+  padding:22px;position:relative;overflow:hidden;transition:var(--t);box-shadow:var(--sh-sm);
+}
+.kpi-card:hover{transform:translateY(-3px);box-shadow:var(--sh);}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--kc-color,var(--teal));border-radius:3px 3px 0 0;}
+.kpi-num{font-family:'IBM Plex Serif',serif;font-size:28px;font-weight:700;color:var(--ink);line-height:1;margin-bottom:5px;letter-spacing:-1px;}
+.kpi-label{font-size:12px;color:var(--muted);}
+.kpi-change{font-size:11px;font-weight:600;margin-top:8px;padding:2px 8px;border-radius:4px;display:inline-block;}
+.kc-up{background:var(--red-light);color:var(--red);}
+.kc-stable{background:var(--green-light);color:var(--green);}
+
+/* =============================================
+   CHART GRID
+============================================= */
+.chart-grid{display:grid;grid-template-columns:1.2fr 0.8fr;gap:16px;margin-top:16px;}
+.chart-card{background:white;border:1px solid var(--line);border-radius:var(--r-xl);padding:22px;box-shadow:var(--sh-sm);}
+.chart-label{font-size:10.5px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;font-family:'IBM Plex Mono',monospace;}
+.chart-title{font-family:'IBM Plex Serif',serif;font-size:14px;font-weight:700;color:var(--ink);margin-bottom:14px;}
+.chart-box{height:200px;position:relative;}
+.rr-card{background:white;border:1px solid var(--line);border-radius:var(--r-xl);padding:22px;box-shadow:var(--sh-sm);}
+.rr-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;}
+.rr-top-label{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:1px;text-transform:uppercase;font-family:'IBM Plex Mono',monospace;}
+.rr-top-num{font-family:'IBM Plex Serif',serif;font-size:32px;font-weight:700;color:var(--ink);letter-spacing:-1px;line-height:1;}
+.rr-top-unit{font-size:11px;color:var(--muted2);}
+.rr-bars{display:flex;flex-direction:column;gap:12px;}
+.rr-row-top{display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;}
+.rr-row-label{color:var(--ink);font-weight:500;}
+.rr-row-val{font-weight:700;}
+.rr-track{height:6px;background:var(--line2);border-radius:3px;}
+.rr-fill{height:6px;border-radius:3px;transition:width 0.8s ease;}
+.gedsi-row{display:flex;gap:8px;flex-wrap:wrap;}
+.gedsi-item{background:white;border:1px solid var(--line);border-radius:var(--r-lg);padding:12px 14px;text-align:center;cursor:pointer;transition:var(--t);flex:1;min-width:70px;}
+.gedsi-item:hover{border-color:var(--teal);background:var(--teal-light);}
+.gi-icon{font-size:18px;margin-bottom:4px;}
+.gi-val{font-family:'IBM Plex Serif',serif;font-size:16px;font-weight:700;color:var(--ink);}
+.gi-lbl{font-size:10px;color:var(--muted);}
+.fasum-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.fasum-item{
+  background:white;border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:12px;text-align:center;cursor:pointer;transition:var(--t);
+  border-top:3px solid var(--fi-color,var(--teal));
+}
+.fasum-item:hover{box-shadow:var(--sh-sm);transform:translateY(-2px);}
+.fi-icon{font-size:18px;margin-bottom:4px;}
+.fi-val{font-family:'IBM Plex Serif',serif;font-size:18px;font-weight:700;color:var(--ink);}
+.fi-lbl{font-size:11px;color:var(--muted);}
+
+/* =============================================
+   HEATMAP
+============================================= */
+.heatmap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(115px,1fr));gap:8px;margin-top:20px;}
+.hm-cell{padding:14px 10px;border-radius:var(--r-lg);text-align:center;cursor:pointer;transition:transform var(--t);border:1px solid transparent;}
+.hm-cell:hover{transform:scale(1.03);}
+.hm-pct{font-family:'IBM Plex Serif',serif;font-size:20px;font-weight:700;line-height:1;margin-bottom:4px;}
+.hm-kec{font-size:10.5px;opacity:0.75;}
+
+/* =============================================
+   WEBGIS — PETA
+============================================= */
+.webgis-layout{display:flex;height:calc(100vh - var(--nav-h));}
+.ws-sidebar{
+  width:290px;flex-shrink:0;
+  background:white;border-right:1px solid var(--line);
+  overflow-y:auto;
+  /* Custom sidebar scrollbar */
+  scrollbar-width:thin;
+  scrollbar-color:var(--line) transparent;
+}
+.ws-head{
+  padding:16px 18px;border-bottom:1px solid var(--line);
+  position:sticky;top:0;background:white;z-index:10;
+}
+.ws-head-inner{display:flex;align-items:center;gap:8px;}
+.ws-head-icon{width:28px;height:28px;border-radius:7px;background:var(--g-teal);display:flex;align-items:center;justify-content:center;color:white;font-size:11px;}
+.ws-head h3{font-family:'IBM Plex Serif',serif;font-size:13.5px;font-weight:700;color:var(--ink);}
+.ws-head p{font-size:11px;color:var(--muted2);margin-top:1px;}
+.ws-sec{padding:12px 16px;border-bottom:1px solid var(--line2);}
+.ws-sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.ws-sec-label{
+  font-size:9.5px;font-weight:700;color:var(--teal);
+  letter-spacing:1.5px;text-transform:uppercase;
+  font-family:'IBM Plex Mono',monospace;
+}
+.ws-sec-count{font-size:10px;color:var(--muted2);background:var(--bg);padding:2px 7px;border-radius:4px;font-family:'IBM Plex Mono',monospace;}
+.lyr-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;}
+.lyr-left{display:flex;align-items:center;gap:8px;}
+.lyr-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.lyr-name{font-size:12px;color:var(--ink);font-weight:500;}
+/* Toggle */
+.tog{position:relative;width:34px;height:18px;flex-shrink:0;}
+.tog input{opacity:0;width:0;height:0;}
+.tog-track{position:absolute;inset:0;border-radius:9px;background:var(--line);cursor:pointer;transition:var(--t);}
+.tog-track::after{content:'';position:absolute;width:12px;height:12px;border-radius:50%;background:white;top:3px;left:3px;transition:var(--t);box-shadow:0 1px 3px rgba(0,0,0,0.18);}
+.tog input:checked + .tog-track{background:var(--teal);}
+.tog input:checked + .tog-track::after{transform:translateX(16px);}
+input[type=range]{width:100%;height:3px;border-radius:3px;outline:none;-webkit-appearance:none;background:var(--line);cursor:pointer;margin-top:4px;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--teal);cursor:pointer;}
+.bm-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.bm-btn{
+  padding:7px;border-radius:7px;font-size:11px;font-weight:600;
+  border:1px solid var(--line);background:white;color:var(--muted);
+  cursor:pointer;transition:var(--t);display:flex;align-items:center;gap:4px;
+  justify-content:center;font-family:'IBM Plex Sans',sans-serif;
+}
+.bm-btn:hover{border-color:var(--muted2);color:var(--ink);}
+.bm-btn.active{border-color:var(--teal);color:var(--teal);background:var(--teal-light);font-weight:700;}
+.tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.tool-btn{
+  padding:8px 7px;border-radius:7px;font-size:11px;font-weight:500;
+  border:1px solid var(--line);background:white;color:var(--ink);
+  cursor:pointer;transition:var(--t);display:flex;align-items:center;gap:5px;
+  justify-content:center;font-family:'IBM Plex Sans',sans-serif;
+}
+.tool-btn:hover{background:var(--bg);border-color:var(--muted2);}
+.tool-btn.active-tool{background:var(--amber-light);border-color:var(--amber);color:var(--amber);font-weight:700;}
+
+/* Map area */
+.ws-map-area{flex:1;position:relative;overflow:hidden;}
+#mapMain{width:100%;height:100%;}
+.map-bar{
+  position:absolute;top:12px;left:12px;right:12px;z-index:500;
+  display:flex;gap:8px;align-items:center;pointer-events:all;
+}
+.map-search-wrap{
+  flex:1;background:white;border:1px solid var(--line);
+  border-radius:9px;display:flex;align-items:center;
+  padding:0 12px;box-shadow:var(--sh-sm);
+}
+.map-search-wrap i{color:var(--muted2);font-size:12px;margin-right:8px;}
+.map-search-wrap input{flex:1;border:none;outline:none;font-size:13px;padding:9px 0;background:transparent;color:var(--ink);}
+.map-btn{
+  width:37px;height:37px;border-radius:8px;
+  background:white;border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--muted);cursor:pointer;transition:var(--t);
+  box-shadow:var(--sh-sm);
+}
+.map-btn:hover{color:var(--teal);border-color:var(--teal-mid);}
+.coord-bar{
+  position:absolute;bottom:0;left:0;right:0;z-index:500;
+  background:rgba(255,255,255,0.97);border-top:1px solid var(--line);
+  padding:5px 14px;font-size:11px;color:var(--muted);
+  backdrop-filter:blur(8px);
+  font-family:'IBM Plex Mono',monospace;
+  display:flex;justify-content:space-between;align-items:center;
+}
+
+/* *** LEGEND PANEL *** */
+.legend-panel{
+  position:absolute;bottom:36px;right:12px;z-index:500;
+  background:white;border:1px solid var(--line);border-radius:var(--r-xl);
+  padding:14px 16px;box-shadow:var(--sh);min-width:200px;
+  max-height:calc(100% - 80px);overflow-y:auto;
+}
+.legend-title{
+  font-family:'IBM Plex Serif',serif;font-size:11.5px;font-weight:700;
+  color:var(--ink);margin-bottom:12px;display:flex;align-items:center;gap:6px;
+  text-transform:uppercase;letter-spacing:0.5px;
+}
+.legend-section{margin-bottom:12px;}
+.legend-section:last-child{margin-bottom:0;}
+.legend-sec-label{
+  font-size:9px;font-weight:700;color:var(--teal);
+  letter-spacing:1.5px;text-transform:uppercase;
+  font-family:'IBM Plex Mono',monospace;margin-bottom:7px;
+}
+.legend-row{display:flex;align-items:center;gap:8px;padding:3px 0;}
+.legend-swatch{width:14px;height:14px;border-radius:3px;flex-shrink:0;}
+.legend-swatch.circle{border-radius:50%;}
+.legend-swatch.line{height:4px;border-radius:2px;width:20px;}
+.legend-key{font-size:11.5px;color:var(--ink);}
+
+/* *** DISTANCE MEASUREMENT *** */
+.measure-bar{
+  position:absolute;top:60px;left:50%;transform:translateX(-50%);z-index:600;
+  background:var(--ink2);color:white;border-radius:10px;
+  padding:8px 18px;font-size:12.5px;font-weight:600;
+  display:none;align-items:center;gap:12px;
+  box-shadow:var(--sh);letter-spacing:0.2px;
+  font-family:'IBM Plex Mono',monospace;
+}
+.measure-bar.visible{display:flex;}
+.mb-close{
+  background:rgba(255,255,255,0.15);border:none;color:white;
+  width:22px;height:22px;border-radius:5px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:11px;
+}
+
+/* =============================================
+   DASHBOARD PAGE
+============================================= */
+.pg-layout{max-width:1120px;margin:0 auto;padding:32px 28px;}
+.pg-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;flex-wrap:wrap;gap:14px;}
+.pg-title{font-family:'IBM Plex Serif',serif;font-size:24px;font-weight:800;color:var(--ink);letter-spacing:-0.5px;}
+.pg-desc{font-size:13px;color:var(--muted);margin-top:4px;}
+.live-badge{
+  display:flex;align-items:center;gap:6px;
+  padding:7px 12px;border-radius:8px;
+  background:var(--green-light);border:1px solid rgba(11,122,90,0.18);
+  font-size:11px;font-weight:600;color:var(--green);flex-shrink:0;
+  font-family:'IBM Plex Mono',monospace;
+}
+
+/* =============================================
+   INFRASTRUKTUR PAGE
+============================================= */
+.infra-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px;}
+.infra-card{
+  background:white;border:1px solid var(--line);border-radius:var(--r-xl);
+  overflow:hidden;cursor:pointer;transition:var(--t);box-shadow:var(--sh-sm);
+}
+.infra-card:hover{box-shadow:var(--sh);border-color:var(--teal-mid);transform:translateY(-2px);}
+.infra-card-hd{padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line2);}
+.infra-card-title{font-size:13.5px;font-weight:600;color:var(--ink);}
+.infra-badge{font-size:10.5px;padding:3px 9px;border-radius:5px;font-weight:700;font-family:'IBM Plex Mono',monospace;}
+.infra-card-bd{padding:14px 20px;}
+.infra-sub-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.infra-sub{padding:8px 10px;background:var(--bg);border-radius:6px;font-size:11.5px;color:var(--muted);}
+
+/* =============================================
+   ANALISIS RISIKO
+============================================= */
+.risk-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.risk-card{background:white;border:1px solid var(--line);border-radius:var(--r-xl);padding:24px;margin-bottom:16px;}
+.form-label{display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:6px;margin-top:14px;text-transform:uppercase;letter-spacing:0.8px;font-family:'IBM Plex Mono',monospace;}
+.form-label:first-child{margin-top:0;}
+.form-select,.form-input{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;color:var(--ink);background:white;outline:none;transition:var(--t);font-family:'IBM Plex Sans',sans-serif;}
+.form-select:focus,.form-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(11,122,138,0.1);}
+.risk-meter{display:flex;align-items:center;gap:16px;padding:16px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-lg);margin-top:14px;}
+.rm-gauge{width:72px;height:72px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;position:relative;}
+.rm-gauge::after{content:'';position:absolute;width:52px;height:52px;border-radius:50%;background:white;}
+.rm-val{position:relative;z-index:1;font-size:14px;font-weight:700;font-family:'IBM Plex Serif',serif;}
+.rm-info h4{font-family:'IBM Plex Serif',serif;font-size:14px;font-weight:700;color:var(--ink);margin-bottom:3px;}
+.rm-info p{font-size:12px;color:var(--muted);}
+.risk-level-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px;}
+.rl-item{padding:14px;border-radius:var(--r-lg);border:1px solid var(--line);text-align:center;}
+.rl-icon{font-size:18px;margin-bottom:6px;}
+.rl-level{font-size:9.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;font-family:'IBM Plex Mono',monospace;}
+.rl-val{font-family:'IBM Plex Serif',serif;font-size:15px;font-weight:700;color:var(--ink);}
+
+/* =============================================
+   LAPORAN
+============================================= */
+.laporan-grid{display:grid;grid-template-columns:1fr 1.2fr;gap:24px;}
+.form-textarea{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;color:var(--ink);background:white;outline:none;resize:vertical;min-height:90px;transition:var(--t);font-family:'IBM Plex Sans',sans-serif;line-height:1.6;}
+.form-textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(11,122,138,0.1);}
+.upload-zone{border:1.5px dashed var(--line);border-radius:8px;padding:22px;text-align:center;cursor:pointer;transition:var(--t);margin-top:6px;}
+.upload-zone:hover{border-color:var(--teal);background:var(--teal-light);}
+.upload-zone i{font-size:22px;color:var(--muted2);margin-bottom:8px;display:block;}
+.upload-zone p{font-size:12.5px;color:var(--muted);line-height:1.5;}
+.btn-kirim{width:100%;padding:11px;border-radius:9px;background:var(--g-teal);color:white;font-size:13.5px;font-weight:600;border:none;cursor:pointer;transition:var(--t);display:flex;align-items:center;justify-content:center;gap:7px;margin-top:14px;box-shadow:var(--sh-teal);}
+.btn-kirim:hover{background:var(--g-amber);}
+.lap-card{background:white;border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;margin-bottom:10px;display:flex;gap:12px;transition:var(--t);}
+.lap-card:hover{box-shadow:var(--sh-sm);}
+.lap-icon{width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.lap-body{flex:1;}
+.lap-title{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px;}
+.lap-meta{display:flex;gap:12px;font-size:11px;color:var(--muted);margin-bottom:5px;font-family:'IBM Plex Mono',monospace;}
+.lap-desc{font-size:12px;color:var(--muted);line-height:1.55;}
+.st-verified{background:#f0fdf4;color:#166534;font-size:10.5px;padding:2px 8px;border-radius:4px;font-weight:700;font-family:'IBM Plex Mono',monospace;}
+.st-pending{background:#fefce8;color:#854d0e;font-size:10.5px;padding:2px 8px;border-radius:4px;font-weight:700;font-family:'IBM Plex Mono',monospace;}
+
+/* =============================================
+   DATA & PUBLIKASI
+============================================= */
+.tabs-bar{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:24px;}
+.tab-item{padding:10px 20px;font-size:13px;font-weight:500;color:var(--muted);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:var(--t);font-family:'IBM Plex Sans',sans-serif;}
+.tab-item:hover{color:var(--ink);}
+.tab-item.active{color:var(--teal);border-color:var(--teal);font-weight:700;}
+.dataset-card{background:white;border:1px solid var(--line);border-radius:var(--r-lg);padding:18px 20px;display:flex;align-items:center;gap:16px;margin-bottom:10px;cursor:pointer;transition:var(--t);}
+.dataset-card:hover{border-color:var(--teal);box-shadow:var(--sh-teal);}
+.ds-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.ds-body{flex:1;}
+.ds-name{font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:3px;}
+.ds-meta{font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+.ds-actions{display:flex;gap:7px;}
+.ds-btn{padding:6px 12px;border-radius:6px;font-size:11px;font-weight:700;border:none;cursor:pointer;transition:var(--t);display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;}
+.ds-csv{background:#ecfdf5;color:#065f46;}
+.ds-shp{background:var(--teal-light);color:var(--teal-dark);}
+.ds-geojson{background:#fff7ed;color:#9a3412;}
+.ds-btn:hover{opacity:0.82;}
+
+/* =============================================
+   TENTANG — UPGRADED
+============================================= */
+.tentang-layout{max-width:880px;margin:0 auto;padding:52px 28px;}
+.tnt-hero{
+  background:linear-gradient(140deg,#040e18 0%,#072437 40%,#0b7a8a 80%,#c9880a 100%);
+  border-radius:var(--r-2xl);padding:52px 44px;
+  text-align:center;margin-bottom:52px;position:relative;overflow:hidden;
+}
+.tnt-hero::before{
+  content:'';position:absolute;inset:0;
+  background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.015'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E");
+}
+.tnt-hero::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 110%,rgba(11,122,138,0.3) 0%,transparent 55%);}
+.tnt-logo-row{display:flex;gap:24px;justify-content:center;align-items:center;margin-bottom:24px;position:relative;z-index:1;}
+.tnt-logo-row img{height:72px;width:auto;filter:drop-shadow(0 2px 10px rgba(0,0,0,0.22));}
+.tnt-badge{
+  display:inline-flex;align-items:center;gap:7px;
+  background:rgba(245,200,66,0.18);border:1px solid rgba(245,200,66,0.35);
+  color:var(--amber-glow);padding:5px 14px;border-radius:20px;
+  font-size:10.5px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  font-family:'IBM Plex Mono',monospace;
+  margin-bottom:16px;position:relative;z-index:1;
+}
+.tnt-h2{
+  font-family:'IBM Plex Serif',serif;font-size:34px;font-weight:800;
+  color:white;margin-bottom:10px;position:relative;z-index:1;letter-spacing:-0.5px;
+}
+.tnt-sub{font-size:13.5px;color:rgba(190,215,228,0.65);position:relative;z-index:1;line-height:1.7;}
+
+/* About content sections */
+.tnt-section{margin-bottom:40px;}
+.tnt-sec-label{
+  font-size:10px;font-weight:700;color:var(--amber);
+  letter-spacing:2px;text-transform:uppercase;
+  margin-bottom:14px;display:flex;align-items:center;gap:8px;
+  font-family:'IBM Plex Mono',monospace;
+}
+.tnt-sec-label::before{content:'';width:16px;height:2px;background:var(--g-amber);border-radius:2px;}
+.tnt-sec-title{font-family:'IBM Plex Serif',serif;font-size:18px;font-weight:800;color:var(--ink);margin-bottom:12px;letter-spacing:-0.3px;}
+
+/* Mission cards */
+.mission-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px;}
+.mission-card{
+  background:white;border:1px solid var(--line);border-radius:var(--r-xl);
+  padding:22px 18px;text-align:center;transition:var(--t);
+  position:relative;overflow:hidden;
+}
+.mission-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--mc-color,var(--g-teal));}
+.mission-card:hover{box-shadow:var(--sh);transform:translateY(-2px);}
+.mc-icon{font-size:28px;margin-bottom:10px;}
+.mc-title{font-family:'IBM Plex Serif',serif;font-size:14px;font-weight:700;color:var(--ink);margin-bottom:6px;}
+.mc-desc{font-size:12px;color:var(--muted);line-height:1.6;}
+
+/* Feature highlights */
+.feature-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:28px;}
+.feature-item{
+  background:white;border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:16px;display:flex;gap:14px;align-items:flex-start;transition:var(--t);
+}
+.feature-item:hover{border-color:var(--teal-mid);box-shadow:var(--sh-sm);}
+.feat-icon-wrap{
+  width:36px;height:36px;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;
+}
+.feat-body{}
+.feat-title{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:3px;}
+.feat-desc{font-size:11.5px;color:var(--muted);line-height:1.55;}
+
+/* Team cards */
+.team-section{margin-bottom:28px;}
+.team-header{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 18px;
+  background:var(--g-teal);border-radius:var(--r-lg) var(--r-lg) 0 0;
+  color:white;
+}
+.team-header-icon{font-size:18px;}
+.team-header-title{font-family:'IBM Plex Serif',serif;font-size:14px;font-weight:700;}
+.team-card-new{
+  background:white;border:1px solid var(--line);border-radius:0 0 var(--r-xl) var(--r-xl);
+  padding:22px;display:flex;gap:18px;align-items:center;
+  border-top:none;transition:var(--t);
+}
+.team-card-new:hover{box-shadow:var(--sh-sm);}
+.team-avatar-new{
+  width:60px;height:60px;border-radius:50%;
+  border:3px solid var(--teal-light);
+  overflow:hidden;flex-shrink:0;
+  background:var(--teal-light);
+  display:flex;align-items:center;justify-content:center;font-size:26px;
+}
+.team-avatar-new img{width:100%;height:100%;object-fit:cover;}
+.team-name-new{font-family:'IBM Plex Serif',serif;font-size:16px;font-weight:700;color:var(--ink);margin-bottom:2px;}
+.team-role-new{font-size:12px;color:var(--muted);margin-bottom:6px;}
+.team-tags{display:flex;gap:6px;flex-wrap:wrap;}
+.team-tag{
+  padding:3px 10px;border-radius:5px;
+  font-size:10.5px;font-weight:700;
+  font-family:'IBM Plex Mono',monospace;
+}
+
+/* Supervisors grid */
+.supervisors-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;}
+.sup-card{
+  background:white;border:1px solid var(--line);border-radius:var(--r-xl);
+  padding:18px;display:flex;gap:14px;align-items:flex-start;transition:var(--t);
+}
+.sup-card:hover{border-color:var(--teal-mid);box-shadow:var(--sh-sm);}
+.sup-avatar{
+  width:48px;height:48px;border-radius:50%;
+  background:var(--g-teal);
+  display:flex;align-items:center;justify-content:center;
+  color:white;font-size:18px;flex-shrink:0;
+}
+.sup-name{font-family:'IBM Plex Serif',serif;font-size:13.5px;font-weight:700;color:var(--ink);margin-bottom:3px;}
+.sup-role{font-size:11px;color:var(--teal);font-weight:600;font-family:'IBM Plex Mono',monospace;margin-bottom:4px;}
+.sup-nip{font-size:11px;color:var(--muted);}
+
+/* Institution card */
+.inst-card{
+  background:linear-gradient(135deg,#f2f8fb 0%,#e6f3f8 100%);
+  border:1px solid var(--line);border-radius:var(--r-xl);
+  padding:28px;text-align:center;margin-top:24px;
+  position:relative;overflow:hidden;
+}
+.inst-card::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%230b7a8a' fill-opacity='0.04'%3E%3Cpath d='M20 20v-20H0v20H20zM0 0v20H20V0H0z'/%3E%3C/g%3E%3C/svg%3E");}
+.inst-logo{font-size:48px;margin-bottom:12px;}
+.inst-name{font-family:'IBM Plex Serif',serif;font-size:17px;font-weight:800;color:var(--ink);margin-bottom:6px;}
+.inst-detail{font-size:13px;color:var(--muted);line-height:1.7;}
+
+/* Stack */
+.stack-wrap{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-xl);padding:24px;margin-top:20px;}
+.stack-title{font-family:'IBM Plex Serif',serif;font-size:14px;font-weight:700;color:var(--ink);margin-bottom:14px;}
+.stack-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.stack-item{
+  background:white;border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:12px 14px;display:flex;align-items:center;gap:10px;transition:var(--t);
+}
+.stack-item:hover{border-color:var(--teal-mid);box-shadow:var(--sh-sm);}
+.si-icon{font-size:18px;flex-shrink:0;}
+.si-name{font-size:12.5px;font-weight:600;color:var(--ink);}
+.si-role{font-size:10px;color:var(--muted);}
+
+/* Timeline */
+.timeline{display:flex;flex-direction:column;gap:0;}
+.tl-item{display:flex;gap:16px;align-items:flex-start;padding-bottom:22px;position:relative;}
+.tl-item:not(:last-child)::before{content:'';position:absolute;left:15px;top:32px;bottom:0;width:2px;background:var(--line);z-index:0;}
+.tl-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;z-index:1;border:3px solid white;box-shadow:0 0 0 2px var(--line);}
+.tl-body{flex:1;}
+.tl-date{font-size:10.5px;font-weight:700;color:var(--teal);font-family:'IBM Plex Mono',monospace;margin-bottom:2px;}
+.tl-title{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:3px;}
+.tl-desc{font-size:12px;color:var(--muted);line-height:1.55;}
+
+/* =============================================
+   FOOTER
+============================================= */
+footer{
+  background:linear-gradient(140deg,#010d18 0%,#04303d 60%,#063d4d 100%);
+  padding:52px 40px 24px;
+  border-top:2px solid rgba(201,136,10,0.28);
+}
+.footer-inner{max-width:1120px;margin:0 auto;}
+.footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:44px;margin-bottom:38px;}
+.fg-logo{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.fg-logo img{height:28px;width:auto;}
+.fg-logo-fb{width:28px;height:28px;border-radius:7px;background:var(--teal);display:flex;align-items:center;justify-content:center;color:white;font-size:13px;}
+.fg-name strong{font-family:'IBM Plex Serif',serif;font-size:14px;font-weight:700;color:white;}
+.fg-name span{font-size:10px;color:rgba(255,255,255,0.28);display:block;margin-top:2px;}
+.fg-desc{font-size:12.5px;color:rgba(255,255,255,0.3);line-height:1.75;margin-bottom:18px;}
+.fg-socials{display:flex;gap:7px;}
+.fg-soc{width:32px;height:32px;border-radius:7px;border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-size:13px;cursor:pointer;transition:var(--t);}
+.fg-soc:hover{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.65);}
+.fg-col-title{font-size:9.5px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.22);margin-bottom:14px;font-family:'IBM Plex Mono',monospace;}
+.fg-link{display:block;font-size:12.5px;color:rgba(255,255,255,0.32);margin-bottom:8px;cursor:pointer;transition:var(--t);text-decoration:none;}
+.fg-link:hover{color:rgba(255,255,255,0.68);}
+.footer-bottom{border-top:1px solid rgba(255,255,255,0.06);padding-top:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+.footer-bottom p{font-size:11px;color:rgba(255,255,255,0.18);font-family:'IBM Plex Mono',monospace;}
+.admin-btn{font-size:10px;color:rgba(255,255,255,0.08);background:none;border:none;cursor:pointer;padding:4px 6px;border-radius:4px;transition:var(--t);}
+.admin-btn:hover{color:rgba(255,255,255,0.32);}
+
+/* =============================================
+   MODALS
+============================================= */
+.modal-bg{display:none;position:fixed;inset:0;z-index:9000;background:rgba(10,15,25,0.55);backdrop-filter:blur(5px);align-items:center;justify-content:center;padding:20px;}
+.modal-bg.open{display:flex;}
+.modal-box{background:white;border-radius:20px;padding:36px;width:100%;max-width:400px;box-shadow:var(--sh-lg);animation:slideUp 0.26s cubic-bezier(0.34,1.56,0.64,1);position:relative;}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.modal-close{position:absolute;top:16px;right:16px;width:28px;height:28px;border-radius:7px;background:var(--bg);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px;transition:var(--t);}
+.modal-close:hover{background:var(--line);color:var(--ink);}
+.modal-logo{display:flex;justify-content:center;margin-bottom:20px;}
+.modal-logo img{height:44px;width:auto;}
+.modal-logo-fb{width:44px;height:44px;border-radius:10px;background:var(--g-teal);display:flex;align-items:center;justify-content:center;color:white;font-size:20px;}
+.modal-title{text-align:center;margin-bottom:24px;}
+.modal-title h2{font-family:'IBM Plex Serif',serif;font-size:22px;font-weight:800;color:var(--ink);margin-bottom:4px;}
+.modal-title p{font-size:13px;color:var(--muted);}
+.auth-tabs{display:flex;gap:0;background:var(--bg);border-radius:10px;padding:3px;margin-bottom:20px;}
+.at-btn{flex:1;padding:9px 12px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:var(--t);font-family:'IBM Plex Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;}
+.at-btn.active{background:var(--g-teal);color:white;box-shadow:var(--sh-teal);}
+.field{position:relative;margin-bottom:12px;}
+.field i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted2);font-size:13px;}
+.field input{width:100%;padding:11px 12px 11px 36px;border:1px solid var(--line);border-radius:9px;font-size:13px;color:var(--ink);outline:none;transition:var(--t);font-family:'IBM Plex Sans',sans-serif;}
+.field input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(11,122,138,0.1);}
+.btn-masuk{width:100%;padding:11px;border-radius:9px;background:var(--g-teal);color:white;font-size:13.5px;font-weight:700;border:none;cursor:pointer;transition:var(--t);margin-top:4px;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:var(--sh-teal);}
+.btn-masuk:hover{background:var(--g-amber);}
+.modal-footer-txt{text-align:center;margin-top:14px;font-size:12px;color:var(--muted);}
+.modal-footer-txt a{color:var(--teal);cursor:pointer;font-weight:600;}
+/* Infra modal */
+.infra-modal-box{background:white;border-radius:22px;width:100%;max-width:480px;box-shadow:var(--sh-lg);animation:slideUp 0.26s cubic-bezier(0.34,1.56,0.64,1);position:relative;overflow:hidden;max-height:90vh;overflow-y:auto;}
+
+/* =============================================
+   TOAST
+============================================= */
+.toast{position:fixed;bottom:22px;right:22px;z-index:9999;background:var(--ink);color:white;padding:11px 18px;border-radius:11px;font-size:13px;transform:translateY(60px);opacity:0;transition:0.3s cubic-bezier(0.34,1.56,0.64,1);pointer-events:none;max-width:320px;box-shadow:var(--sh-lg);display:flex;align-items:center;gap:8px;font-weight:500;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.success{background:var(--green);}
+.toast.error{background:var(--red);}
+
+/* =============================================
+   LEAFLET OVERRIDES
+============================================= */
+.leaflet-popup-content-wrapper{border-radius:16px!important;box-shadow:var(--sh-lg)!important;border:1px solid var(--line)!important;}
+.leaflet-popup-content{margin:16px 18px!important;font-family:'IBM Plex Sans',sans-serif!important;font-size:13px!important;}
+.leaflet-popup-close-button{top:10px!important;right:12px!important;}
+
+/* =============================================
+   RESPONSIVE
+============================================= */
+@media(max-width:900px){
+  .hero-inner{grid-template-columns:1fr;gap:36px;}
+  .hero-cards{display:none;}
+  .hero-metrics{grid-template-columns:1fr 1fr;}
+  .kpi-grid{grid-template-columns:1fr 1fr;}
+  .chart-grid{grid-template-columns:1fr;}
+  .footer-grid{grid-template-columns:1fr 1fr;gap:24px;}
+  .nb-nav{display:none;}
+  .nb-status{display:none;}
+  .webgis-layout{flex-direction:column;}
+  .ws-sidebar{width:100%;height:200px;max-height:200px;}
+  .ph-content.active{grid-template-columns:1fr;}
+  .ph-feats{grid-template-columns:1fr;}
+  .mission-grid{grid-template-columns:1fr;}
+  .feature-grid{grid-template-columns:1fr;}
+  .supervisors-grid{grid-template-columns:1fr;}
+  .stack-grid{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="ld-brand">
+    <div class="ld-icon"><i class="fas fa-satellite-dish"></i></div>
+    <div class="ld-text">SIGAP Lampung</div>
+  </div>
+  <div class="ld-bar-wrap"><div class="ld-prog"></div></div>
+  <div class="ld-sub">// Memuat sistem informasi geospasial...</div>
+</div>
+
+<!-- NAVBAR -->
+<nav class="navbar" id="navbar">
+  <div class="nb-brand" onclick="goPage('home')">
+    <img src="Foto1.png" style="height:26px;width:auto;margin-right:2px" onerror="this.style.display='none'">
+    <div class="nb-icon">S</div>
+    <div>
+      <div class="nb-brand-name">SIGAP Lampung</div>
+      <div class="nb-brand-sub">Geospasial Bencana &amp; Infrastruktur Kritis</div>
+    </div>
+  </div>
+  <div class="nb-sep"></div>
+  <div class="nb-nav">
+    <button class="nb-link active" id="nl-home" onclick="goPage('home')"><i class="fas fa-home" style="font-size:11px"></i> Beranda</button>
+    <button class="nb-link" id="nl-peta" onclick="goPage('peta')"><i class="fas fa-map" style="font-size:11px"></i> Peta Interaktif</button>
+    <button class="nb-link" id="nl-dashboard" onclick="goPage('dashboard')"><i class="fas fa-chart-bar" style="font-size:11px"></i> Dashboard</button>
+    <button class="nb-link" id="nl-analisis" onclick="goPage('analisis')"><i class="fas fa-magnifying-glass-chart" style="font-size:11px"></i> Analisis Risiko</button>
+    <button class="nb-link" id="nl-data" onclick="goPage('data')"><i class="fas fa-database" style="font-size:11px"></i> Data</button>
+    <button class="nb-link" id="nl-tentang" onclick="goPage('tentang')"><i class="fas fa-circle-info" style="font-size:11px"></i> Tentang</button>
+  </div>
+  <div class="nb-right">
+    <div class="nb-status"><div class="nb-dot"></div> LIVE</div>
+    <button class="nb-login" onclick="openLogin()"><i class="fas fa-sign-in-alt" style="font-size:11px"></i> Masuk</button>
+    <button class="nb-lapor" onclick="goPage('laporan')"><i class="fas fa-triangle-exclamation" style="font-size:11px"></i> Lapor Darurat</button>
+  </div>
+</nav>
+
+<!-- ===========================
+     BERANDA
+=========================== -->
+<div class="page active" id="pageHome">
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-left">
+        <div class="hero-eyebrow"><span class="hero-eyebrow-line"></span>Platform WebGIS Geospasial Bencana</div>
+        <div class="hero-logos">
+          <img src="Foto1.png" alt="Universitas Lampung" onerror="this.style.display='none'">
+          <img src="Foto4.png" alt="SIGAP" onerror="this.style.display='none'">
+        </div>
+        <h1 class="hero-h1">Sistem Informasi<br>Geospasial <em>Ancaman</em><br>&amp; Infrastruktur Kritis<span class="hero-sub-title">Bandar Lampung</span></h1>
+        <p class="hero-desc">Platform WebGIS terintegrasi untuk pemetaan bahaya hidrometeorologi dan infrastruktur kritis Bandar Lampung — mendukung pengambilan keputusan berbasis Pentahelix dengan data real-time dan analisis spasial canggih.</p>
+        <div class="hero-actions">
+          <button class="btn-primary" onclick="goPage('peta')"><i class="fas fa-map-marked-alt"></i> Buka Peta Interaktif</button>
+          <button class="btn-outline" onclick="goPage('dashboard')"><i class="fas fa-chart-bar"></i> Dashboard</button>
+        </div>
+        <div class="hero-metrics">
+          <div class="hm-item"><div class="hm-val">9.795</div><div class="hm-label">Unit Rumah Terdampak</div></div>
+          <div class="hm-item"><div class="hm-val">108</div><div class="hm-label">Desa Terpapar</div></div>
+          <div class="hm-item"><div class="hm-val">248</div><div class="hm-label">Infrastruktur Kritis</div></div>
+          <div class="hm-item"><div class="hm-val">72%</div><div class="hm-label">Indeks Risiko</div></div>
+        </div>
+      </div>
+      <div class="hero-right">
+        <div class="hero-cards">
+          <div class="hc-card" onclick="goPage('dashboard')">
+            <div class="hc-badge" style="background:#fef2f2">🏡</div>
+            <div><div class="hc-val">9,795</div><div class="hc-lbl">Rumah Rusak</div><div class="hc-trend trend-up">4.109 Rusak Berat</div></div>
+          </div>
+          <div class="hc-card" onclick="goPage('peta')">
+            <div class="hc-badge" style="background:var(--teal-light)">🏗️</div>
+            <div><div class="hc-val">248</div><div class="hc-lbl">Infrastruktur Kritis</div><div class="hc-trend trend-stable">7 Kategori Terdata</div></div>
+          </div>
+          <div class="hc-card" onclick="goPage('analisis')">
+            <div class="hc-badge" style="background:#fffbeb">⚠️</div>
+            <div><div class="hc-val" style="color:#c23b2a">72%</div><div class="hc-lbl">Indeks Risiko Multi-Bahaya</div><div class="hc-trend trend-up">Prioritas Tinggi</div></div>
+          </div>
+          <div class="hc-card" onclick="goPage('peta')">
+            <div class="hc-badge" style="background:#ecfdf5">🌊</div>
+            <div><div class="hc-val">3</div><div class="hc-lbl">Jenis Bahaya Terpetakan</div><div class="hc-trend trend-stable" style="color:var(--muted2)">Banjir · Bandang · Longsor</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PENTAHELIX -->
+  <section class="section ph-section">
+    <div class="section-inner">
+      <div class="sec-label">Pendekatan Pentahelix</div>
+      <h2 class="sec-title">Platform untuk Semua<br>Pemangku Kepentingan</h2>
+      <p class="sec-desc">SIGAP Lampung dirancang mengakomodasi kebutuhan 5 aktor dalam penanggulangan bencana hidrometeorologi secara terpadu dan berbasis bukti ilmiah.</p>
+      <div class="ph-grid">
+        <div class="ph-item active" onclick="switchPH(this,'pn-akademisi')"><div class="ph-icon">🎓</div><div class="ph-title">Akademisi</div><div class="ph-role">Peneliti &amp; Dosen</div></div>
+        <div class="ph-item" onclick="switchPH(this,'pn-pemerintah')"><div class="ph-icon">🏛️</div><div class="ph-title">Pemerintah</div><div class="ph-role">BPBD, OPD Teknis</div></div>
+        <div class="ph-item" onclick="switchPH(this,'pn-bisnis')"><div class="ph-icon">💼</div><div class="ph-title">Dunia Usaha</div><div class="ph-role">Pelaku Bisnis</div></div>
+        <div class="ph-item" onclick="switchPH(this,'pn-masyarakat')"><div class="ph-icon">🏘️</div><div class="ph-title">Masyarakat</div><div class="ph-role">Warga &amp; Komunitas</div></div>
+        <div class="ph-item" onclick="switchPH(this,'pn-media')"><div class="ph-icon">📺</div><div class="ph-title">Media</div><div class="ph-role">Pers &amp; Jurnalis</div></div>
+      </div>
+      <div class="ph-content active" id="pn-akademisi">
+        <div class="ph-info"><h3>Akademisi — Peneliti &amp; Dosen</h3><p>Akses dataset spasial lengkap untuk penelitian, analisis risiko berbasis GIS, pemodelan bahaya, dan pengembangan metodologi mitigasi bencana berbasis bukti ilmiah.</p>
+          <div class="ph-needs">
+            <div class="ph-need"><i class="fas fa-download"></i> Download dataset penelitian (CSV, GeoJSON, Shapefile)</div>
+            <div class="ph-need"><i class="fas fa-chart-bar"></i> Dashboard analisis spasial &amp; statistik bencana</div>
+            <div class="ph-need"><i class="fas fa-database"></i> Metadata dataset &amp; katalog data terbuka</div>
+            <div class="ph-need"><i class="fas fa-file-alt"></i> Dokumentasi metodologi &amp; referensi penelitian</div>
+          </div>
+        </div>
+        <div class="ph-feats">
+          <div class="ph-feat" onclick="goPage('peta')"><div class="ph-feat-icon">🗺️</div><div class="ph-feat-name">Peta Multi-Layer</div><div class="ph-feat-desc">Visualisasi bahaya banjir, bandang, longsor &amp; infrastruktur</div></div>
+          <div class="ph-feat" onclick="goPage('analisis')"><div class="ph-feat-icon">📊</div><div class="ph-feat-name">Analisis Risiko</div><div class="ph-feat-desc">Model risiko komposit berbasis data spasial terverifikasi</div></div>
+          <div class="ph-feat" onclick="goPage('data')"><div class="ph-feat-icon">📂</div><div class="ph-feat-name">Open Dataset</div><div class="ph-feat-desc">Data terbuka siap unduh dalam format GeoJSON, SHP, CSV</div></div>
+          <div class="ph-feat" onclick="goPage('dashboard')"><div class="ph-feat-icon">📈</div><div class="ph-feat-name">Statistik GEDSI</div><div class="ph-feat-desc">Data kelompok rentan terintegrasi dalam dashboard analitik</div></div>
+        </div>
+      </div>
+      <div class="ph-content" id="pn-pemerintah">
+        <div class="ph-info"><h3>Pemerintah — BPBD &amp; OPD</h3><p>Alat koordinasi tanggap darurat, monitoring risiko real-time, dan pengambilan keputusan berbasis data geospasial untuk penanggulangan bencana yang efektif.</p>
+          <div class="ph-needs">
+            <div class="ph-need"><i class="fas fa-bell"></i> Sistem peringatan dini &amp; monitoring bencana</div>
+            <div class="ph-need"><i class="fas fa-map-pin"></i> Peta sebaran infrastruktur kritis &amp; rawan bencana</div>
+            <div class="ph-need"><i class="fas fa-file-pdf"></i> Laporan bencana terverifikasi &amp; cetak peta</div>
+            <div class="ph-need"><i class="fas fa-users"></i> Koordinasi &amp; distribusi informasi ke stakeholder</div>
+          </div>
+        </div>
+        <div class="ph-feats">
+          <div class="ph-feat" onclick="goPage('laporan')"><div class="ph-feat-icon">🚨</div><div class="ph-feat-name">Laporan Darurat</div><div class="ph-feat-desc">Sistem pelaporan bencana real-time dengan verifikasi</div></div>
+          <div class="ph-feat" onclick="goPage('dashboard')"><div class="ph-feat-icon">📋</div><div class="ph-feat-name">Dashboard Monitoring</div><div class="ph-feat-desc">KPI risiko &amp; dampak bencana dalam satu tampilan</div></div>
+          <div class="ph-feat" onclick="goPage('peta')"><div class="ph-feat-icon">🎯</div><div class="ph-feat-name">Targeting Mitigasi</div><div class="ph-feat-desc">Identifikasi zona prioritas intervensi berbasis risiko</div></div>
+          <div class="ph-feat" onclick="goPage('data')"><div class="ph-feat-icon">📤</div><div class="ph-feat-name">Ekspor Data</div><div class="ph-feat-desc">Unduh data dalam format yang diperlukan untuk laporan dinas</div></div>
+        </div>
+      </div>
+      <div class="ph-content" id="pn-bisnis">
+        <div class="ph-info"><h3>Dunia Usaha — Pelaku Bisnis</h3><p>Informasi risiko bencana untuk perencanaan bisnis, manajemen aset, penilaian risiko lokasi usaha, dan keberlanjutan operasional di Bandar Lampung.</p>
+          <div class="ph-needs">
+            <div class="ph-need"><i class="fas fa-building"></i> Penilaian risiko lokasi bisnis &amp; properti</div>
+            <div class="ph-need"><i class="fas fa-shield-alt"></i> Data historis kejadian bencana per kecamatan</div>
+            <div class="ph-need"><i class="fas fa-route"></i> Analisis aksesibilitas infrastruktur kritis</div>
+            <div class="ph-need"><i class="fas fa-chart-line"></i> Proyeksi dampak bencana terhadap operasional</div>
+          </div>
+        </div>
+        <div class="ph-feats">
+          <div class="ph-feat" onclick="goPage('analisis')"><div class="ph-feat-icon">🏢</div><div class="ph-feat-name">Risk Assessment</div><div class="ph-feat-desc">Penilaian risiko komprehensif per lokasi usaha</div></div>
+          <div class="ph-feat" onclick="goPage('peta')"><div class="ph-feat-icon">🗺️</div><div class="ph-feat-name">Site Analysis</div><div class="ph-feat-desc">Analisis spasial kawasan bisnis terhadap bahaya bencana</div></div>
+          <div class="ph-feat" onclick="goPage('data')"><div class="ph-feat-icon">📊</div><div class="ph-feat-name">Business Data</div><div class="ph-feat-desc">Dataset infrastruktur kritis untuk due diligence bisnis</div></div>
+          <div class="ph-feat" onclick="goPage('dashboard')"><div class="ph-feat-icon">📰</div><div class="ph-feat-name">Market Intelligence</div><div class="ph-feat-desc">Informasi risiko wilayah untuk ekspansi bisnis</div></div>
+        </div>
+      </div>
+      <div class="ph-content" id="pn-masyarakat">
+        <div class="ph-info"><h3>Masyarakat — Warga &amp; Komunitas</h3><p>Akses informasi bahaya bencana di sekitar tempat tinggal, panduan evakuasi, dan cara melaporkan kejadian bencana secara langsung dari lapangan.</p>
+          <div class="ph-needs">
+            <div class="ph-need"><i class="fas fa-house-flood-water"></i> Cek status rawan bencana di kelurahan saya</div>
+            <div class="ph-need"><i class="fas fa-person-walking-arrow-right"></i> Rute evakuasi &amp; titik kumpul terdekat</div>
+            <div class="ph-need"><i class="fas fa-camera"></i> Laporkan bencana dengan foto langsung</div>
+            <div class="ph-need"><i class="fas fa-hospital"></i> Lokasi fasilitas kesehatan &amp; darurat terdekat</div>
+          </div>
+        </div>
+        <div class="ph-feats">
+          <div class="ph-feat" onclick="goPage('peta')"><div class="ph-feat-icon">📍</div><div class="ph-feat-name">Cek Lokasi Saya</div><div class="ph-feat-desc">GPS real-time &amp; status bahaya di sekitar lokasi Anda</div></div>
+          <div class="ph-feat" onclick="goPage('laporan')"><div class="ph-feat-icon">📸</div><div class="ph-feat-name">Lapor Bencana</div><div class="ph-feat-desc">Kirim foto &amp; deskripsi kejadian untuk verifikasi BPBD</div></div>
+          <div class="ph-feat" onclick="goPage('peta')"><div class="ph-feat-icon">🏥</div><div class="ph-feat-name">Fasilitas Darurat</div><div class="ph-feat-desc">Peta RS, puskesmas, posko darurat terdekat</div></div>
+          <div class="ph-feat" onclick="goPage('dashboard')"><div class="ph-feat-icon">📲</div><div class="ph-feat-name">Notifikasi Risiko</div><div class="ph-feat-desc">Update status bahaya &amp; peringatan dini wilayah</div></div>
+        </div>
+      </div>
+      <div class="ph-content" id="pn-media">
+        <div class="ph-info"><h3>Media — Pers &amp; Jurnalis</h3><p>Data terverifikasi dan visualisasi bencana untuk mendukung pemberitaan akurat, infografis, dan peliputan tanggap darurat yang bertanggung jawab.</p>
+          <div class="ph-needs">
+            <div class="ph-need"><i class="fas fa-newspaper"></i> Data dampak bencana terverifikasi untuk pemberitaan</div>
+            <div class="ph-need"><i class="fas fa-chart-pie"></i> Infografis &amp; visualisasi statistik bencana siap pakai</div>
+            <div class="ph-need"><i class="fas fa-map"></i> Peta bencana berkualitas tinggi untuk ilustrasi</div>
+            <div class="ph-need"><i class="fas fa-history"></i> Arsip kejadian bencana historis &amp; tren tahunan</div>
+          </div>
+        </div>
+        <div class="ph-feats">
+          <div class="ph-feat" onclick="goPage('data')"><div class="ph-feat-icon">📰</div><div class="ph-feat-name">Press Release Data</div><div class="ph-feat-desc">Dataset bencana resmi untuk kebutuhan liputan media</div></div>
+          <div class="ph-feat" onclick="goPage('dashboard')"><div class="ph-feat-icon">📊</div><div class="ph-feat-name">Infografis Live</div><div class="ph-feat-desc">Chart &amp; statistik real-time yang dapat disematkan</div></div>
+          <div class="ph-feat" onclick="goPage('peta')"><div class="ph-feat-icon">🖼️</div><div class="ph-feat-name">Screenshot Peta</div><div class="ph-feat-desc">Ekspor peta bencana berkualitas tinggi untuk publikasi</div></div>
+          <div class="ph-feat" onclick="goPage('laporan')"><div class="ph-feat-icon">📡</div><div class="ph-feat-name">Live Feed</div><div class="ph-feat-desc">Feed laporan bencana real-time dari lapangan</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD SNAPSHOT -->
+  <section class="section dash-bg">
+    <div class="section-inner">
+      <div class="sec-label">Snapshot Dashboard</div>
+      <h2 class="sec-title">Data Dampak Bencana<br>Terkini Bandar Lampung</h2>
+      <div class="kpi-grid">
+        <div class="kpi-card" style="--kc-color:var(--red)"><div class="kpi-num">47</div><div class="kpi-label">Titik Rawan Banjir</div><div class="kpi-change kc-up">▲ +3 bulan ini</div></div>
+        <div class="kpi-card" style="--kc-color:#1d4ed8"><div class="kpi-num">23</div><div class="kpi-label">Zona Banjir Bandang</div><div class="kpi-change kc-stable">● Stabil</div></div>
+        <div class="kpi-card" style="--kc-color:#92400e"><div class="kpi-num">19</div><div class="kpi-label">Area Rawan Longsor</div><div class="kpi-change kc-up">▲ +2 bulan ini</div></div>
+        <div class="kpi-card" style="--kc-color:var(--amber)"><div class="kpi-num">248</div><div class="kpi-label">Infrastruktur Kritis Terpetakan</div><div class="kpi-change kc-stable">● 7 Kategori</div></div>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div class="chart-label">Analitik</div>
+          <div class="chart-title">Kerusakan Bangunan &amp; Infrastruktur per Kecamatan</div>
+          <div class="chart-box"><canvas id="chartKerusakan"></canvas></div>
+        </div>
+        <div class="rr-card">
+          <div class="rr-top">
+            <div><div class="rr-top-label">Total Rumah Rusak</div><div class="rr-top-num">9,795</div><div class="rr-top-unit">Unit · Sumber: Dinas Perumahan</div></div>
+            <div style="font-size:32px;opacity:0.5">🏚️</div>
+          </div>
+          <div class="rr-bars">
+            <div><div class="rr-row-top"><span class="rr-row-label">Rusak Berat</span><span class="rr-row-val" style="color:var(--red)">4,109</span></div><div class="rr-track"><div class="rr-fill" style="width:88%;background:var(--red)"></div></div></div>
+            <div><div class="rr-row-top"><span class="rr-row-label">Rusak Sedang</span><span class="rr-row-val" style="color:var(--orange)">2,932</span></div><div class="rr-track"><div class="rr-fill" style="width:63%;background:var(--orange)"></div></div></div>
+            <div><div class="rr-row-top"><span class="rr-row-label">Rusak Ringan</span><span class="rr-row-val" style="color:var(--green)">2,644</span></div><div class="rr-track"><div class="rr-fill" style="width:57%;background:var(--green)"></div></div></div>
+            <div><div class="rr-row-top"><span class="rr-row-label">Hilang/Hanyut</span><span class="rr-row-val" style="color:#7c3aed">110</span></div><div class="rr-track"><div class="rr-fill" style="width:10%;background:#7c3aed"></div></div></div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:16px">
+        <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;font-family:'IBM Plex Mono',monospace">Kelompok Rentan (GEDSI)</div>
+        <div class="gedsi-row">
+          <div class="gedsi-item" onclick="goPage('dashboard')"><div class="gi-icon">👶</div><div class="gi-val">363</div><div class="gi-lbl">Balita</div></div>
+          <div class="gedsi-item" onclick="goPage('dashboard')"><div class="gi-icon">🧒</div><div class="gi-val">524</div><div class="gi-lbl">Anak-anak</div></div>
+          <div class="gedsi-item" onclick="goPage('dashboard')"><div class="gi-icon">👴</div><div class="gi-val">366</div><div class="gi-lbl">Lansia</div></div>
+          <div class="gedsi-item" onclick="goPage('dashboard')"><div class="gi-icon">🤰</div><div class="gi-val">28</div><div class="gi-lbl">Ibu Hamil</div></div>
+          <div class="gedsi-item" onclick="goPage('dashboard')"><div class="gi-icon">♿</div><div class="gi-val">31</div><div class="gi-lbl">Disabilitas</div></div>
+        </div>
+      </div>
+      <div style="margin-top:18px">
+        <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;font-family:'IBM Plex Mono',monospace">Fasilitas Umum Terdampak</div>
+        <div class="fasum-grid">
+          <div class="fasum-item" style="--fi-color:#1a56db" onclick="goPage('peta')"><div class="fi-icon">🏫</div><div class="fi-val">146</div><div class="fi-lbl">Pendidikan</div></div>
+          <div class="fasum-item" style="--fi-color:#dc2626" onclick="goPage('peta')"><div class="fi-icon">🏥</div><div class="fi-val">11</div><div class="fi-lbl">Kesehatan</div></div>
+          <div class="fasum-item" style="--fi-color:#d97706" onclick="goPage('peta')"><div class="fi-icon">🕌</div><div class="fi-val">96</div><div class="fi-lbl">Ibadah</div></div>
+          <div class="fasum-item" style="--fi-color:#7c3aed" onclick="goPage('peta')"><div class="fi-icon">🏛️</div><div class="fi-val">34</div><div class="fi-lbl">Pemerintahan</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-grid">
+        <div>
+          <div class="fg-logo">
+            <img src="Foto4.png" alt="SIGAP" onerror="this.style.display='none';document.getElementById('fg-fb').style.display='flex'">
+            <div id="fg-fb" class="fg-logo-fb" style="display:none;">S</div>
+            <div class="fg-name"><strong>SIGAP Lampung</strong><span>Sistem Informasi Geospasial Ancaman &amp; Infrastruktur Kritis</span></div>
+          </div>
+          <p class="fg-desc">Platform WebGIS penelitian untuk mendukung mitigasi dan pengurangan risiko bencana hidrometeorologi melalui teknologi geospasial — mengintegrasikan data bahaya bencana dengan infrastruktur kritis dalam kerangka Pentahelix.</p>
+          <div class="fg-socials">
+            <div class="fg-soc"><i class="fab fa-instagram"></i></div>
+            <div class="fg-soc"><i class="fab fa-twitter"></i></div>
+            <div class="fg-soc"><i class="fab fa-youtube"></i></div>
+            <div class="fg-soc"><i class="fas fa-envelope"></i></div>
+          </div>
+        </div>
+        <div>
+          <div class="fg-col-title">Navigasi</div>
+          <a class="fg-link" onclick="goPage('home')">Beranda</a>
+          <a class="fg-link" onclick="goPage('peta')">Peta Interaktif</a>
+          <a class="fg-link" onclick="goPage('dashboard')">Dashboard</a>
+          <a class="fg-link" onclick="goPage('laporan')">Laporan Bencana</a>
+          <a class="fg-link" onclick="goPage('data')">Data &amp; Publikasi</a>
+          <a class="fg-link" onclick="goPage('tentang')">Tentang SIGAP</a>
+        </div>
+        <div>
+          <div class="fg-col-title">Layer Data</div>
+          <a class="fg-link">Bahaya Banjir</a>
+          <a class="fg-link">Banjir Bandang</a>
+          <a class="fg-link">Tanah Longsor</a>
+          <a class="fg-link">Infrastruktur Kritis</a>
+          <a class="fg-link">Curah Hujan Ekstrem</a>
+          <a class="fg-link">Pos Duga Air (PDA)</a>
+          <a class="fg-link">Stasiun BMKG</a>
+          <a class="fg-link">Sub-DAS Prioritas</a>
+        </div>
+        <div>
+          <div class="fg-col-title">Peneliti</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.35);line-height:1.9">
+            <strong style="color:rgba(255,255,255,0.6);display:block;margin-bottom:6px;font-family:'IBM Plex Serif',serif">🎓 Mahasiswa Peneliti</strong>
+            Fitria Agustina<br>
+            <span style="font-size:10.5px;font-family:'IBM Plex Mono',monospace">NPM 2313034021</span><br><br>
+            <strong style="color:rgba(255,255,255,0.5);display:block;margin-bottom:4px">📋 Pembimbing</strong>
+            Nyokro Mukti Wijaya, S.Pd., M.Pd.<br>
+            Dr. Rahma Kurnia SU, S.Si., M.Pd.<br><br>
+            <strong style="color:rgba(255,255,255,0.3);font-size:11px;font-family:'IBM Plex Mono',monospace">Pendidikan Geografi · FKIP UNILA</strong>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>© 2026 SIGAP Lampung · Fitria Agustina (NPM 2313034021) · Pendidikan Geografi FKIP UNILA</p>
+        <p>Powered by Leaflet.js · OpenStreetMap · PostGIS · Chart.js</p>
+        <button class="admin-btn" onclick="openLogin()">⬡</button>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<!-- ===========================
+     PETA INTERAKTIF
+=========================== -->
+<div class="page" id="pagePeta">
+  <div class="webgis-layout">
+    <!-- SIDEBAR -->
+    <div class="ws-sidebar">
+      <div class="ws-head">
+        <div class="ws-head-inner">
+          <div class="ws-head-icon"><i class="fas fa-layer-group"></i></div>
+          <div><h3>Kontrol Layer</h3><p>Kelola data &amp; alat analisis</p></div>
+        </div>
+      </div>
+
+      <!-- PENCARIAN -->
+      <div class="ws-sec">
+        <div class="ws-sec-label">Pencarian</div>
+        <div style="position:relative">
+          <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted2);font-size:12px"></i>
+          <input type="text" id="infraSearch" placeholder="Nama infrastruktur / kecamatan..." style="width:100%;padding:8px 10px 8px 30px;border:1px solid var(--line);border-radius:7px;font-size:12px;outline:none;color:var(--ink);" oninput="searchInfra(this.value)">
+        </div>
+      </div>
+
+      <!-- BAHAYA BANJIR -->
+      <div class="ws-sec">
+        <div class="ws-sec-header">
+          <div class="ws-sec-label">🌊 Bahaya Banjir</div>
+          <div class="ws-sec-count">3 GeoJSON</div>
+        </div>
+        <!-- Level filter -->
+        <div style="display:flex;gap:4px;margin-bottom:10px">
+          <button class="bm-btn active" onclick="filterHazard('banjir','all',this)" style="flex:1;font-size:10px">Semua</button>
+          <button class="bm-btn" onclick="filterHazard('banjir','Tinggi',this)" style="flex:1;font-size:10px;color:var(--red)">Tinggi</button>
+          <button class="bm-btn" onclick="filterHazard('banjir','Sedang',this)" style="flex:1;font-size:10px;color:var(--orange)">Sedang</button>
+          <button class="bm-btn" onclick="filterHazard('banjir','Rendah',this)" style="flex:1;font-size:10px;color:var(--green)">Rendah</button>
+        </div>
+        <!-- Legenda warna -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;padding:7px 9px;background:var(--bg);border-radius:6px;align-items:center">
+          <span style="font-size:10px;color:var(--muted2);font-family:'IBM Plex Mono',monospace;font-weight:700">LEGENDA:</span>
+          <span style="display:flex;align-items:center;gap:3px;font-size:10px;color:var(--muted)"><span style="width:10px;height:10px;background:#ef4444;border-radius:2px;display:inline-block"></span>Tinggi</span>
+          <span style="display:flex;align-items:center;gap:3px;font-size:10px;color:var(--muted)"><span style="width:10px;height:10px;background:#f97316;border-radius:2px;display:inline-block"></span>Sedang</span>
+          <span style="display:flex;align-items:center;gap:3px;font-size:10px;color:var(--muted)"><span style="width:10px;height:10px;background:#3b82f6;border-radius:2px;display:inline-block"></span>Rendah</span>
+        </div>
+        <div class="lyr-row">
+          <div class="lyr-left"><div class="lyr-dot" style="background:#3b82f6"></div><span class="lyr-name">Zona Banjir</span></div>
+          <label class="tog"><input type="checkbox" checked onchange="toggleLyr('banjir',this.checked)"><div class="tog-track"></div></label>
+        </div>
+        <input type="range" min="10" max="100" value="70" style="margin-bottom:8px" oninput="setOpacity('banjir',this.value)" title="Transparansi">
+        <div class="lyr-row">
+          <div class="lyr-left"><div class="lyr-dot" style="background:#1d4ed8"></div><span class="lyr-name">Banjir Bandang</span></div>
+          <label class="tog"><input type="checkbox" checked onchange="toggleLyr('bandang',this.checked)"><div class="tog-track"></div></label>
+        </div>
+        <input type="range" min="10" max="100" value="70" style="margin-bottom:8px" oninput="setOpacity('bandang',this.value)">
+        <div class="lyr-row">
+          <div class="lyr-left"><div class="lyr-dot" style="background:#92400e"></div><span class="lyr-name">Tanah Longsor</span></div>
+          <label class="tog"><input type="checkbox" checked onchange="toggleLyr('longsor',this.checked)"><div class="tog-track"></div></label>
+        </div>
+        <input type="range" min="10" max="100" value="70" oninput="setOpacity('longsor',this.value)">
+        <div style="font-size:10px;color:var(--teal-dark);font-family:'IBM Plex Mono',monospace;margin-top:8px;padding:6px 8px;background:var(--teal-light);border-radius:5px">
+          <i class="fas fa-file-code" style="margin-right:4px"></i>Sumber: GeoJSON lokal · BPBD &amp; PVMBG 2026
+        </div>
+      </div>
+
+      <!-- HIDROMETEOROLOGI -->
+      <div class="ws-sec">
+        <div class="ws-sec-header">
+          <div class="ws-sec-label">🌧️ Hidrometeorologi</div>
+          <div class="ws-sec-count">5 layer</div>
+        </div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#7c3aed"></div><span class="lyr-name">Cuaca Ekstrem</span></div><label class="tog"><input type="checkbox" checked onchange="toggleLyr('cuaca',this.checked)"><div class="tog-track"></div></label></div>
+        <input type="range" min="10" max="100" value="70" style="margin-bottom:8px" oninput="setOpacity('cuaca',this.value)" title="Transparansi Cuaca Ekstrem">
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#0284c7"></div><span class="lyr-name">Curah Hujan Ekstrem</span></div><label class="tog"><input type="checkbox" checked onchange="toggleLyr('curahHujan',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#0891b2"></div><span class="lyr-name">Pos Duga Air (PDA)</span></div><label class="tog"><input type="checkbox" checked onchange="toggleLyr('pdaStation',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#7c3aed"></div><span class="lyr-name">Stasiun Hujan BMKG</span></div><label class="tog"><input type="checkbox" checked onchange="toggleLyr('stasiunBMKG',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#059669"></div><span class="lyr-name">Sub-DAS Prioritas</span></div><label class="tog"><input type="checkbox" checked onchange="toggleLyr('subDAS',this.checked)"><div class="tog-track"></div></label></div>
+      </div>
+
+      <!-- INFRASTRUKTUR KRITIS -->
+      <div class="ws-sec">
+        <div class="ws-sec-header">
+          <div class="ws-sec-label">🏗️ Infrastruktur Kritis</div>
+          <div class="ws-sec-count">7 jenis</div>
+        </div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#0891b2"></div><span class="lyr-name">Transportasi</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraCategory('Transportasi',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#d97706"></div><span class="lyr-name">Komunikasi</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraCategory('Komunikasi',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#7c3aed"></div><span class="lyr-name">Pemerintahan</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraCategory('Pemerintahan',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#0d9488"></div><span class="lyr-name">Sanitasi &amp; Air</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraCategory('Sanitasi & Air',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#dc2626"></div><span class="lyr-name">Kesehatan</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraCategory('Kesehatan',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#ea580c"></div><span class="lyr-name">Energi</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraCategory('Energi',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#4f46e5"></div><span class="lyr-name">Pendidikan</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraCategory('Pendidikan',this.checked)"><div class="tog-track"></div></label></div>
+      </div>
+
+      <!-- 15 INFRASTRUKTUR GEOJSON LAYERS -->
+      <div class="ws-sec">
+        <div class="ws-sec-header">
+          <div class="ws-sec-label">🗂️ Infrastruktur GeoJSON</div>
+          <div class="ws-sec-count">15 layer</div>
+        </div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#dc2626"></div><span class="lyr-name">🏥 Rumah Sakit</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraGeoJSON('RumahSakit',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#e11d48"></div><span class="lyr-name">🏪 Klinik</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraGeoJSON('Klinik',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#f43f5e"></div><span class="lyr-name">🏩 Puskesmas</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraGeoJSON('pusekesmas',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#7c3aed"></div><span class="lyr-name">🏛️ Pemerintahan</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraGeoJSON('Pemerintahan',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#4f46e5"></div><span class="lyr-name">🏫 Pendidikan</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraGeoJSON('Pendidikan',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#0891b2"></div><span class="lyr-name">🚌 Terminal Bus</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraGeoJSON('TerminalBus',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#0284c7"></div><span class="lyr-name">🚉 Stasiun KA</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraGeoJSON('StasiunKA',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#1d4ed8"></div><span class="lyr-name">🚂 Rel KA</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraGeoJSON('RelKA',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#0f766e"></div><span class="lyr-name">⚓ Pelabuhan</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraGeoJSON('Pelabuhan',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#ea580c"></div><span class="lyr-name">🔌 Kantor PLN</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraGeoJSON('KantorPLN',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#d97706"></div><span class="lyr-name">⚡ Gardu Listrik</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraGeoJSON('GarduListrik',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#ca8a04"></div><span class="lyr-name">⛽ SPBU</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraGeoJSON('SPBU',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#64748b"></div><span class="lyr-name">📡 Menara Telepon</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraGeoJSON('MeanaraTelepon',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#374151"></div><span class="lyr-name">🌉 Jembatan</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraGeoJSON('Jembatan',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#6b7280"></div><span class="lyr-name">🛣️ Jalan</span></div><label class="tog"><input type="checkbox" onchange="toggleInfraGeoJSON('Jalan',this.checked)"><div class="tog-track"></div></label></div>
+        <div style="font-size:10px;color:var(--teal-dark);font-family:'IBM Plex Mono',monospace;margin-top:8px;padding:6px 8px;background:var(--teal-light);border-radius:5px">
+          <i class="fas fa-file-code" style="margin-right:4px"></i>Letakkan file .geojson di folder yang sama dengan HTML
+        </div>
+      </div>
+
+      <!-- RISK FILTER -->
+      <div class="ws-sec">
+        <div class="ws-sec-header">
+          <div class="ws-sec-label">⚠️ Filter Risiko</div>
+        </div>
+        <div style="display:flex;gap:4px">
+          <button class="bm-btn" id="rfAll" onclick="filterByRisk('all')" style="flex:1;font-size:10px">Semua</button>
+          <button class="bm-btn" id="rfTinggi" onclick="filterByRisk('tinggi')" style="flex:1;font-size:10px;color:var(--red)">🔴 Tinggi</button>
+          <button class="bm-btn" id="rfSedang" onclick="filterByRisk('sedang')" style="flex:1;font-size:10px;color:var(--orange)">🟡 Sedang</button>
+          <button class="bm-btn" id="rfRendah" onclick="filterByRisk('rendah')" style="flex:1;font-size:10px;color:var(--green)">🟢 Rendah</button>
+        </div>
+      </div>
+
+      <!-- BASEMAP -->
+      <div class="ws-sec">
+        <div class="ws-sec-label">Basemap</div>
+        <div class="bm-grid">
+          <button class="bm-btn active" onclick="switchBM(this,'osm')"><i class="fas fa-map"></i> OSM</button>
+          <button class="bm-btn" onclick="switchBM(this,'satellite')"><i class="fas fa-satellite"></i> Satelit</button>
+          <button class="bm-btn" onclick="switchBM(this,'esri')"><i class="fas fa-globe"></i> ESRI</button>
+          <button class="bm-btn" onclick="switchBM(this,'terrain')"><i class="fas fa-mountain"></i> Terrain</button>
+          <button class="bm-btn" onclick="switchBM(this,'topo')"><i class="fas fa-layer-group"></i> Topo</button>
+          <button class="bm-btn" onclick="switchBM(this,'hybrid')"><i class="fas fa-th"></i> Hybrid</button>
+        </div>
+      </div>
+
+      <!-- ALAT ANALISIS -->
+      <div class="ws-sec">
+        <div class="ws-sec-label">Alat Analisis</div>
+        <div class="tool-grid">
+          <button class="tool-btn" id="btn-distance" onclick="activateDistance()"><i class="fas fa-ruler"></i> Ukur Jarak</button>
+          <button class="tool-btn" onclick="toolAction('area')"><i class="fas fa-draw-polygon"></i> Ukur Luas</button>
+          <button class="tool-btn" onclick="toolAction('buffer')"><i class="fas fa-circle"></i> Buffer</button>
+          <button class="tool-btn" onclick="toolAction('query')"><i class="fas fa-filter"></i> Query</button>
+          <button class="tool-btn" onclick="getGPS()"><i class="fas fa-location-dot"></i> Lokasi Saya</button>
+          <button class="tool-btn" onclick="toolAction('print')"><i class="fas fa-print"></i> Cetak Peta</button>
+        </div>
+        <!-- Distance result display -->
+        <div id="distResult" style="display:none;margin-top:10px;padding:10px;background:var(--amber-light);border:1px solid var(--amber);border-radius:8px;font-size:12px;font-family:'IBM Plex Mono',monospace;color:var(--amber)"></div>
+      </div>
+    </div>
+
+    <!-- MAP AREA -->
+    <div class="ws-map-area">
+      <!-- Top bar -->
+      <div class="map-bar">
+        <div class="map-search-wrap">
+          <i class="fas fa-search"></i>
+          <input type="text" placeholder="Cari lokasi, infrastruktur, kecamatan..." onkeyup="mapSearch(this.value)">
+        </div>
+        <button class="map-btn" onclick="resetMapView()" title="Reset View"><i class="fas fa-home"></i></button>
+        <button class="map-btn" onclick="fullscreen()" title="Fullscreen"><i class="fas fa-expand"></i></button>
+        <button class="map-btn" onclick="toolAction('screenshot')" title="Screenshot"><i class="fas fa-camera"></i></button>
+        <button class="map-btn" onclick="toolAction('download')" title="Download Data"><i class="fas fa-download"></i></button>
+      </div>
+
+      <!-- Distance measurement bar -->
+      <div id="measureBar" class="measure-bar">
+        <i class="fas fa-ruler" style="color:var(--amber-glow)"></i>
+        <span>Mode Ukur Jarak — Klik titik pertama di peta</span>
+        <span id="measureResult" style="font-weight:700;color:var(--amber-glow)"></span>
+        <button class="mb-close" onclick="deactivateDistance()"><i class="fas fa-times"></i></button>
+      </div>
+
+      <!-- Map container -->
+      <div id="mapMain"></div>
+
+      <!-- Coordinate bar -->
+      <div class="coord-bar" id="coordBar">
+        <span>📍 −5.42°, 105.26° &nbsp;·&nbsp; Zoom: 13 &nbsp;·&nbsp; Skala 1:50.000</span>
+        <span id="coordExtra" style="color:var(--muted2)">Bandar Lampung, Lampung</span>
+      </div>
+
+      <!-- Interactive Legend Panel -->
+      <div class="legend-panel" id="legendPanel">
+        <div class="legend-title"><i class="fas fa-map-legend" style="color:var(--teal);font-size:10px"></i> Legenda Peta</div>
+        
+        <div class="legend-section">
+          <div class="legend-sec-label">🌊 Bahaya Banjir</div>
+          <div class="legend-row"><div class="legend-swatch" style="background:#ef4444;opacity:0.8"></div><div class="legend-key">Tinggi — Zona &gt;1m</div></div>
+          <div class="legend-row"><div class="legend-swatch" style="background:#f97316;opacity:0.8"></div><div class="legend-key">Sedang — Zona 0.5–1m</div></div>
+          <div class="legend-row"><div class="legend-swatch" style="background:#3b82f6;opacity:0.7"></div><div class="legend-key">Rendah — Zona &lt;0.5m</div></div>
+        </div>
+
+        <div class="legend-section">
+          <div class="legend-sec-label">💧 Banjir Bandang</div>
+          <div class="legend-row"><div class="legend-swatch" style="background:#1d4ed8;opacity:0.8"></div><div class="legend-key">Zona Rawan Bandang</div></div>
+          <div class="legend-row"><div class="legend-swatch line" style="background:#2563eb"></div><div class="legend-key">Lintasan Aliran</div></div>
+        </div>
+
+        <div class="legend-section">
+          <div class="legend-sec-label">⛰️ Tanah Longsor</div>
+          <div class="legend-row"><div class="legend-swatch" style="background:#92400e;opacity:0.8"></div><div class="legend-key">Zona Sangat Rawan</div></div>
+          <div class="legend-row"><div class="legend-swatch" style="background:#d97706;opacity:0.7"></div><div class="legend-key">Zona Rawan</div></div>
+          <div class="legend-row"><div class="legend-swatch" style="background:#fbbf24;opacity:0.6"></div><div class="legend-key">Zona Potensi</div></div>
+        </div>
+
+        <div class="legend-section">
+          <div class="legend-sec-label">🏗️ Infrastruktur Kritis</div>
+          <div class="legend-row"><div class="legend-swatch circle" style="background:#dc2626"></div><div class="legend-key">Kesehatan</div></div>
+          <div class="legend-row"><div class="legend-swatch circle" style="background:#0891b2"></div><div class="legend-key">Transportasi</div></div>
+          <div class="legend-row"><div class="legend-swatch circle" style="background:#0d9488"></div><div class="legend-key">Sanitasi &amp; Air</div></div>
+          <div class="legend-row"><div class="legend-swatch circle" style="background:#ea580c"></div><div class="legend-key">Energi</div></div>
+          <div class="legend-row"><div class="legend-swatch circle" style="background:#7c3aed"></div><div class="legend-key">Pemerintahan</div></div>
+          <div class="legend-row"><div class="legend-swatch circle" style="background:#4f46e5"></div><div class="legend-key">Pendidikan</div></div>
+          <div class="legend-row"><div class="legend-swatch circle" style="background:#d97706"></div><div class="legend-key">Komunikasi</div></div>
+        </div>
+
+        <div class="legend-section">
+          <div class="legend-sec-label">🌡️ Risiko Komposit</div>
+          <div class="legend-row"><div style="width:14px;height:14px;border-radius:50%;background:var(--red);border:2px solid white;flex-shrink:0"></div><div class="legend-key">Indeks ≥70 — Tinggi</div></div>
+          <div class="legend-row"><div style="width:14px;height:14px;border-radius:50%;background:var(--orange);border:2px solid white;flex-shrink:0"></div><div class="legend-key">Indeks 40–69 — Sedang</div></div>
+          <div class="legend-row"><div style="width:14px;height:14px;border-radius:50%;background:var(--green);border:2px solid white;flex-shrink:0"></div><div class="legend-key">Indeks &lt;40 — Rendah</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===========================
+     DASHBOARD
+=========================== -->
+<div class="page" id="pageDashboard">
+  <div class="pg-layout">
+    <div class="pg-header">
+      <div><div class="pg-title">Dashboard Analitik</div><div class="pg-desc">Monitoring risiko bencana &amp; infrastruktur kritis · Bandar Lampung · 2026</div></div>
+      <div class="live-badge"><div class="nb-dot"></div> Live · 5 menit lalu</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+      <div style="background:white;border:1px solid var(--line);border-radius:var(--r-xl);padding:20px;border-left:3px solid var(--teal)"><div style="font-family:'IBM Plex Serif',serif;font-size:26px;font-weight:700;color:var(--ink)">47</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Titik Rawan Banjir</div><div style="font-size:11px;font-weight:700;color:var(--red);margin-top:5px;background:var(--red-light);padding:2px 7px;border-radius:4px;display:inline-block;font-family:'IBM Plex Mono',monospace">▲ 3 bulan ini</div></div>
+      <div style="background:white;border:1px solid var(--line);border-radius:var(--r-xl);padding:20px;border-left:3px solid #1d4ed8"><div style="font-family:'IBM Plex Serif',serif;font-size:26px;font-weight:700;color:var(--ink)">23</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Zona Banjir Bandang</div><div style="font-size:11px;font-weight:700;color:var(--green);margin-top:5px;background:var(--green-light);padding:2px 7px;border-radius:4px;display:inline-block;font-family:'IBM Plex Mono',monospace">● Stabil</div></div>
+      <div style="background:white;border:1px solid var(--line);border-radius:var(--r-xl);padding:20px;border-left:3px solid #92400e"><div style="font-family:'IBM Plex Serif',serif;font-size:26px;font-weight:700;color:var(--ink)">19</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Area Rawan Longsor</div><div style="font-size:11px;font-weight:700;color:var(--orange);margin-top:5px;background:var(--orange-light);padding:2px 7px;border-radius:4px;display:inline-block;font-family:'IBM Plex Mono',monospace">▲ 2 bulan ini</div></div>
+      <div style="background:white;border:1px solid var(--line);border-radius:var(--r-xl);padding:20px;border-left:3px solid var(--amber)"><div style="font-family:'IBM Plex Serif',serif;font-size:26px;font-weight:700;color:var(--ink)">248</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Infrastruktur Kritis</div><div style="font-size:11px;font-weight:700;color:var(--green);margin-top:5px;background:var(--green-light);padding:2px 7px;border-radius:4px;display:inline-block;font-family:'IBM Plex Mono',monospace">7 Kategori</div></div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-label">Distribusi Wilayah</div>
+        <div class="chart-title">Dampak Bencana per Kecamatan</div>
+        <div class="chart-box"><canvas id="chartDashboard"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-label">Tren Tahunan</div>
+        <div class="chart-title">Frekuensi Kejadian 2020–2026</div>
+        <div class="chart-box"><canvas id="chartTren"></canvas></div>
+      </div>
+    </div>
+    <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div style="background:white;border:1px solid var(--line);border-radius:var(--r-xl);padding:22px">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;font-family:'IBM Plex Mono',monospace">Distribusi Risiko</div>
+        <div style="font-family:'IBM Plex Serif',serif;font-size:14px;font-weight:700;color:var(--ink);margin-bottom:14px">Infrastruktur per Level Risiko</div>
+        <div class="chart-box" style="height:180px"><canvas id="chartRiskPie"></canvas></div>
+      </div>
+      <div style="background:white;border:1px solid var(--line);border-radius:var(--r-xl);padding:22px">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;font-family:'IBM Plex Mono',monospace">Kerentanan</div>
+        <div style="font-family:'IBM Plex Serif',serif;font-size:14px;font-weight:700;color:var(--ink);margin-bottom:14px">Kelompok Rentan GEDSI</div>
+        <div class="chart-box" style="height:180px"><canvas id="chartGEDSI"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===========================
+     ANALISIS RISIKO
+=========================== -->
+<div class="page" id="pageAnalisis">
+  <div class="pg-layout">
+    <div class="pg-header">
+      <div><div class="pg-title">Analisis Risiko</div><div class="pg-desc">Pemodelan &amp; evaluasi indeks risiko multi-bahaya infrastruktur kritis</div></div>
+    </div>
+    <div class="risk-grid">
+      <div>
+        <div class="risk-card">
+          <label class="form-label">Pilih Infrastruktur Kritis</label>
+          <select class="form-select" onchange="updateRiskDemo(this.value)">
+            <option value="">— Pilih infrastruktur —</option>
+            <option value="rs">RSUD Abdul Moeloek</option>
+            <option value="pdam">PDAM Bandar Lampung</option>
+            <option value="pelabuhan">Pelabuhan Panjang</option>
+            <option value="gardu">Gardu Induk Rajabasa</option>
+            <option value="stasiun">Stasiun Tanjung Karang</option>
+          </select>
+          <label class="form-label">Jenis Bahaya</label>
+          <select class="form-select">
+            <option>Multi-Bahaya (Komposit)</option>
+            <option>Banjir</option>
+            <option>Banjir Bandang</option>
+            <option>Tanah Longsor</option>
+          </select>
+          <label class="form-label">Skenario Iklim</label>
+          <select class="form-select">
+            <option>Kondisi Saat Ini (Baseline)</option>
+            <option>Proyeksi 2030 (RCP 4.5)</option>
+            <option>Proyeksi 2050 (RCP 8.5)</option>
+          </select>
+          <div class="risk-meter" id="riskMeter" style="display:none">
+            <div class="rm-gauge" style="background:conic-gradient(#dc2626 0% 72%,#f3f4f6 72%)">
+              <span class="rm-val" id="rmVal" style="color:#dc2626">72%</span>
+            </div>
+            <div class="rm-info"><h4 id="rmTitle">RSUD Abdul Moeloek</h4><p id="rmSub">Tingkat risiko tinggi. Indeks: 72/100</p></div>
+          </div>
+          <div class="risk-level-grid" id="riskLevels" style="display:none">
+            <div class="rl-item" style="background:var(--red-light);border-color:var(--red)"><div class="rl-icon">🌊</div><div class="rl-level" style="color:var(--red)">Banjir</div><div class="rl-val" id="rl-banjir">TINGGI</div></div>
+            <div class="rl-item" style="background:var(--orange-light);border-color:var(--orange)"><div class="rl-icon">💧</div><div class="rl-level" style="color:var(--orange)">Bandang</div><div class="rl-val" id="rl-bandang">SEDANG</div></div>
+            <div class="rl-item" style="background:var(--green-light);border-color:var(--green)"><div class="rl-icon">⛰️</div><div class="rl-level" style="color:var(--green)">Longsor</div><div class="rl-val" id="rl-longsor">RENDAH</div></div>
+          </div>
+        </div>
+        <div class="risk-card">
+          <div style="font-family:'IBM Plex Serif',serif;font-size:15px;font-weight:700;color:var(--ink);margin-bottom:14px">Matriks Risiko 5×5</div>
+          <div id="riskMatrix" style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:14px"></div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.6">Matriks menampilkan kombinasi tingkat kemungkinan (Probability) vs dampak (Impact) untuk setiap jenis bahaya.</div>
+        </div>
+      </div>
+      <div>
+        <div class="risk-card">
+          <div style="font-family:'IBM Plex Serif',serif;font-size:15px;font-weight:700;color:var(--ink);margin-bottom:14px">Tabel Risiko Infrastruktur Kritis</div>
+          <div id="riskTable"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===========================
+     LAPORAN
+=========================== -->
+<div class="page" id="pageLaporan">
+  <div class="pg-layout">
+    <div class="pg-header">
+      <div><div class="pg-title">Laporan Bencana</div><div class="pg-desc">Kirim laporan kejadian bencana &amp; lihat laporan terkini yang diverifikasi</div></div>
+      <div class="live-badge"><div class="nb-dot"></div> Real-time</div>
+    </div>
+    <div class="laporan-grid">
+      <div>
+        <div class="risk-card">
+          <div style="font-family:'IBM Plex Serif',serif;font-size:15px;font-weight:700;color:var(--ink);margin-bottom:18px">Kirim Laporan Bencana</div>
+          <label class="form-label">Jenis Bencana</label>
+          <select class="form-select">
+            <option>Banjir</option><option>Banjir Bandang</option><option>Tanah Longsor</option><option>Angin Kencang</option><option>Lainnya</option>
+          </select>
+          <label class="form-label">Kecamatan</label>
+          <select class="form-select">
+            <option>Pilih Kecamatan...</option>
+            <option>Teluk Betung Utara</option><option>Teluk Betung Selatan</option><option>Teluk Betung Barat</option><option>Rajabasa</option><option>Kemiling</option><option>Panjang</option><option>Sukarame</option><option>Kedaton</option>
+          </select>
+          <label class="form-label">Kelurahan</label>
+          <input type="text" class="form-input" placeholder="Nama kelurahan...">
+          <label class="form-label">Deskripsi Kejadian</label>
+          <textarea class="form-textarea" placeholder="Jelaskan kejadian bencana secara detail — lokasi, kondisi, dampak, kebutuhan darurat..."></textarea>
+          <label class="form-label">Tingkat Keparahan</label>
+          <select class="form-select">
+            <option>Rendah — Gangguan ringan</option><option>Sedang — Dampak signifikan</option><option>Tinggi — Darurat, butuh evakuasi</option>
+          </select>
+          <div class="upload-zone">
+            <i class="fas fa-camera"></i>
+            <p>Seret foto ke sini atau<br><strong>klik untuk unggah</strong></p>
+            <p style="font-size:10.5px;margin-top:4px;opacity:0.7">JPG, PNG, Max 10MB · Foto lapangan diprioritaskan</p>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+            <div><label class="form-label">Latitude GPS</label><input type="text" class="form-input" id="gpsLat" placeholder="-5.420000"></div>
+            <div><label class="form-label">Longitude GPS</label><input type="text" class="form-input" id="gpsLng" placeholder="105.260000"></div>
+          </div>
+          <button class="btn-kirim" onclick="submitLaporan()"><i class="fas fa-paper-plane"></i> Kirim Laporan ke BPBD</button>
+        </div>
+      </div>
+      <div>
+        <div style="font-family:'IBM Plex Serif',serif;font-size:15px;font-weight:700;color:var(--ink);margin-bottom:16px">Laporan Terkini</div>
+        <div id="laporanList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===========================
+     DATA & PUBLIKASI
+=========================== -->
+<div class="page" id="pageData">
+  <div class="pg-layout">
+    <div class="pg-header"><div><div class="pg-title">Data &amp; Publikasi</div><div class="pg-desc">Katalog dataset terbuka untuk penelitian, analisis, dan pelaporan</div></div></div>
+    <div class="tabs-bar">
+      <button class="tab-item active">Dataset Geospasial</button>
+      <button class="tab-item" onclick="showToast('Media Center — Segera Hadir')">Media Center</button>
+      <button class="tab-item" onclick="showToast('Press Release — Segera Hadir')">Press Release</button>
+    </div>
+    <div id="datasetList"></div>
+  </div>
+</div>
+
+<!-- ===========================
+     TENTANG — UPGRADED
+=========================== -->
+<div class="page" id="pageTentang">
+  <div class="tentang-layout">
+
+    <!-- HERO -->
+    <div class="tnt-hero">
+      <div class="tnt-logo-row">
+        <img src="Foto1.png" alt="Universitas Lampung" onerror="this.style.display='none'">
+        <img src="Foto4.png" alt="SIGAP" onerror="this.style.display='none'">
+      </div>
+      <div class="tnt-badge"><i class="fas fa-satellite-dish"></i> Geospatial Research Platform</div>
+      <div class="tnt-h2">SIGAP Lampung</div>
+      <div class="tnt-sub">Sistem Informasi Geospasial Ancaman dan Infrastruktur Kritis<br>Bandar Lampung · Penelitian Skripsi 2026</div>
+    </div>
+
+    <!-- OVERVIEW -->
+    <div class="tnt-section">
+      <div class="tnt-sec-label">Platform Overview</div>
+      <div class="tnt-sec-title">Apa itu SIGAP Lampung?</div>
+      <p style="font-size:14px;color:var(--muted);line-height:1.85;margin-bottom:24px;font-weight:300">SIGAP Lampung adalah platform WebGIS penelitian skripsi Program Studi Pendidikan Geografi FKIP Universitas Lampung yang mengintegrasikan data bahaya bencana hidrometeorologi — banjir, banjir bandang, dan tanah longsor — dengan infrastruktur kritis Bandar Lampung. Platform ini dikembangkan dalam kerangka pendekatan Pentahelix untuk mendukung penanggulangan bencana berbasis bukti ilmiah dan data geospasial terverifikasi.</p>
+      <div class="mission-grid">
+        <div class="mission-card" style="--mc-color:var(--g-teal)"><div class="mc-icon">🗺️</div><div class="mc-title">Pemetaan Bahaya</div><div class="mc-desc">Visualisasi spasial zona bahaya hidrometeorologi berbasis data BPBD, PVMBG, dan BMKG</div></div>
+        <div class="mission-card" style="--mc-color:var(--g-amber)"><div class="mc-icon">🏗️</div><div class="mc-title">Infrastruktur Kritis</div><div class="mc-desc">Database 248 objek infrastruktur kritis terklasifikasi dalam 7 kategori dengan indeks risiko komposit</div></div>
+        <div class="mission-card" style="--mc-color:var(--g-danger)"><div class="mc-icon">🤝</div><div class="mc-title">Pentahelix Support</div><div class="mc-desc">Dirancang melayani 5 aktor — Akademisi, Pemerintah, Bisnis, Masyarakat, dan Media secara terpadu</div></div>
+      </div>
+    </div>
+
+    <!-- FEATURES -->
+    <div class="tnt-section">
+      <div class="tnt-sec-label">Fitur Unggulan</div>
+      <div class="tnt-sec-title">Teknologi &amp; Kemampuan Platform</div>
+      <div class="feature-grid">
+        <div class="feature-item">
+          <div class="feat-icon-wrap" style="background:var(--teal-light)"><span style="font-size:16px">🗺️</span></div>
+          <div class="feat-body"><div class="feat-title">Peta Interaktif Multi-Layer</div><div class="feat-desc">Toggle layer bahaya, infrastruktur, dan hidrometeorologi secara independen dengan kontrol transparansi</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feat-icon-wrap" style="background:var(--amber-light)"><span style="font-size:16px">📏</span></div>
+          <div class="feat-body"><div class="feat-title">Pengukuran Jarak &amp; Luas</div><div class="feat-desc">Alat ukur jarak geodetik real-time langsung di peta dengan presisi tinggi</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feat-icon-wrap" style="background:var(--red-light)"><span style="font-size:16px">⚠️</span></div>
+          <div class="feat-body"><div class="feat-title">Popup Infrastruktur Kritis</div><div class="feat-desc">Detail lengkap per objek: riwayat kejadian, indeks risiko komposit, rekomendasi mitigasi, koordinat</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feat-icon-wrap" style="background:var(--purple-light)"><span style="font-size:16px">📊</span></div>
+          <div class="feat-body"><div class="feat-title">Dashboard Analitik</div><div class="feat-desc">Visualisasi KPI bencana, chart distribusi, tren tahunan, dan data GEDSI kelompok rentan</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feat-icon-wrap" style="background:var(--green-light)"><span style="font-size:16px">🗂️</span></div>
+          <div class="feat-body"><div class="feat-title">Open Data Catalog</div><div class="feat-desc">Dataset GeoJSON, SHP, CSV siap unduh untuk keperluan penelitian, analisis, dan pelaporan</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feat-icon-wrap" style="background:var(--teal-light)"><span style="font-size:16px">📋</span></div>
+          <div class="feat-body"><div class="feat-title">Sistem Pelaporan Bencana</div><div class="feat-desc">Form laporan bencana berbasis GPS dengan foto upload langsung ke sistem verifikasi BPBD</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEVELOPER -->
+    <div class="tnt-section">
+      <div class="tnt-sec-label">Tim Pengembang</div>
+      <div class="tnt-sec-title">Mahasiswa Peneliti &amp; Dosen Pembimbing</div>
+
+      <!-- Main researcher -->
+      <div class="team-section">
+        <div class="team-header"><div class="team-header-icon">👩‍💻</div><div class="team-header-title">Mahasiswa Peneliti</div></div>
+        <div class="team-card-new">
+          <div class="team-avatar-new">
+            <img src="Foto10.png" alt="Fitria Agustina" onerror="this.style.display='none';this.parentElement.innerHTML='👩‍💻'">
+          </div>
+          <div style="flex:1">
+            <div class="team-name-new">Fitria Agustina</div>
+            <div class="team-role-new">Pengembang Platform SIGAP Lampung</div>
+            <div class="team-tags">
+              <span class="team-tag" style="background:var(--teal-light);color:var(--teal)">NPM 2313034021</span>
+              <span class="team-tag" style="background:var(--amber-light);color:var(--amber)">WebGIS Developer</span>
+              <span class="team-tag" style="background:var(--purple-light);color:var(--purple)">GIS Researcher</span>
+              <span class="team-tag" style="background:var(--green-light);color:var(--green)">Geografi FKIP UNILA</span>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-bottom:4px">Status</div>
+            <div style="font-size:11px;font-weight:700;color:var(--green);background:var(--green-light);padding:3px 10px;border-radius:5px;font-family:'IBM Plex Mono',monospace">Aktif 2026</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Supervisors -->
+      <div class="team-section" style="margin-top:20px">
+        <div class="team-header" style="background:linear-gradient(135deg,#1e3a5f,#2d5986)"><div class="team-header-icon">🎓</div><div class="team-header-title">Dosen Pembimbing</div></div>
+        <div style="background:white;border:1px solid var(--line);border-radius:0 0 var(--r-xl) var(--r-xl);border-top:none;padding:20px">
+          <div class="supervisors-grid">
+            <div class="sup-card">
+              <div class="sup-avatar"><i class="fas fa-user-tie"></i></div>
+              <div>
+                <div class="sup-name">Nyokro Mukti Wijaya, S.Pd., M.Pd.</div>
+                <div class="sup-role">Pembimbing I</div>
+                <div class="sup-nip" style="font-family:'IBM Plex Mono',monospace">NIP 19971022 202406 100 1</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:3px">Pendidikan Geografi · FKIP UNILA</div>
+              </div>
+            </div>
+            <div class="sup-card">
+              <div class="sup-avatar" style="background:linear-gradient(135deg,#0b7a5a,#12a67a)"><i class="fas fa-user-graduate"></i></div>
+              <div>
+                <div class="sup-name">Dr. Rahma Kurnia SU, S.Si., M.Pd.</div>
+                <div class="sup-role">Pembimbing II</div>
+                <div class="sup-nip" style="font-family:'IBM Plex Mono',monospace">NIP 19820905 200604 2 001</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:3px">Pendidikan Geografi · FKIP UNILA</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INSTITUTION -->
+    <div class="tnt-section">
+      <div class="tnt-sec-label">Afiliasi Institusi</div>
+      <div class="inst-card">
+        <div class="inst-logo">🏛️</div>
+        <div class="inst-name">Universitas Lampung</div>
+        <div class="inst-detail">
+          Program Studi Pendidikan Geografi<br>
+          Fakultas Keguruan dan Ilmu Pendidikan (FKIP)<br>
+          Jl. Prof. Dr. Soemantri Brojonegoro No. 1, Bandar Lampung 35145<br>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--teal)">www.unila.ac.id</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESEARCH TIMELINE -->
+    <div class="tnt-section">
+      <div class="tnt-sec-label">Timeline Penelitian</div>
+      <div class="tnt-sec-title">Tahapan Pengembangan Platform</div>
+      <div class="timeline">
+        <div class="tl-item">
+          <div class="tl-dot" style="background:var(--teal-light);color:var(--teal)">🔍</div>
+          <div class="tl-body"><div class="tl-date">Jan 2026</div><div class="tl-title">Studi Literatur &amp; Pengumpulan Data</div><div class="tl-desc">Pengumpulan data primer dan sekunder bahaya bencana, inventarisasi infrastruktur kritis Bandar Lampung</div></div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot" style="background:var(--amber-light);color:var(--amber)">🗺️</div>
+          <div class="tl-body"><div class="tl-date">Feb–Mar 2026</div><div class="tl-title">Pembuatan Database Geospasial</div><div class="tl-desc">Digitisasi peta bahaya, georeferencing data infrastruktur, validasi koordinat GeoJSON multi-layer</div></div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot" style="background:var(--purple-light);color:var(--purple)">💻</div>
+          <div class="tl-body"><div class="tl-date">Apr–Mei 2026</div><div class="tl-title">Pengembangan Platform WebGIS</div><div class="tl-desc">Development SIGAP Lampung berbasis Leaflet.js, Chart.js, HTML/CSS/JS dengan desain responsif</div></div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot" style="background:var(--green-light);color:var(--green)">✅</div>
+          <div class="tl-body"><div class="tl-date">Jun 2026</div><div class="tl-title">Validasi &amp; Uji Platform</div><div class="tl-desc">Validasi data, uji fungsionalitas, review oleh dosen pembimbing dan pihak BPBD Bandar Lampung</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STACK -->
+    <div class="stack-wrap">
+      <div class="stack-title">Stack Teknologi</div>
+      <div class="stack-grid">
+        <div class="stack-item"><div class="si-icon">🗺️</div><div><div class="si-name">Leaflet.js</div><div class="si-role">WebGIS Engine</div></div></div>
+        <div class="stack-item"><div class="si-icon">📊</div><div><div class="si-name">Chart.js</div><div class="si-role">Data Visualization</div></div></div>
+        <div class="stack-item"><div class="si-icon">🌐</div><div><div class="si-name">OpenStreetMap</div><div class="si-role">Base Mapping</div></div></div>
+        <div class="stack-item"><div class="si-icon">📐</div><div><div class="si-name">PostGIS</div><div class="si-role">Spatial Database</div></div></div>
+        <div class="stack-item"><div class="si-icon">⚡</div><div><div class="si-name">HTML / CSS / JS</div><div class="si-role">Frontend Stack</div></div></div>
+        <div class="stack-item"><div class="si-icon">🔷</div><div><div class="si-name">GeoJSON</div><div class="si-role">Data Format</div></div></div>
+        <div class="stack-item"><div class="si-icon">🛰️</div><div><div class="si-name">ESRI ArcGIS</div><div class="si-role">Satellite Tiles</div></div></div>
+        <div class="stack-item"><div class="si-icon">🔣</div><div><div class="si-name">Font Awesome</div><div class="si-role">Icon Library</div></div></div>
+        <div class="stack-item"><div class="si-icon">🔡</div><div><div class="si-name">IBM Plex Sans · IBM Plex Serif</div><div class="si-role">Typography</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===========================
+     INFRA MODAL
+=========================== -->
+<div class="modal-bg" id="infraModal">
+  <div class="infra-modal-box">
+    <button style="position:absolute;top:14px;right:14px;z-index:10;width:28px;height:28px;border-radius:7px;background:rgba(255,255,255,0.85);border:1px solid var(--line);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px" onclick="closeInfraModal()">✕</button>
+    <div id="infraModalContent"></div>
+  </div>
+</div>
+
+<!-- LOGIN MODAL -->
+<div class="modal-bg" id="loginModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeLogin()">✕</button>
+    <div class="modal-logo"><div class="modal-logo-fb"><i class="fas fa-satellite-dish"></i></div></div>
+    <div class="modal-title"><h2>Selamat Datang</h2><p>Masuk atau daftar untuk akses penuh SIGAP Lampung</p></div>
+    <div class="auth-tabs">
+      <button class="at-btn active" id="atLogin" onclick="switchAuthTab('login')"><i class="fas fa-sign-in-alt"></i> Masuk</button>
+      <button class="at-btn" id="atRegister" onclick="switchAuthTab('register')"><i class="fas fa-user-plus"></i> Daftar</button>
+    </div>
+    <div id="authFormLogin">
+      <div class="field"><i class="fas fa-envelope"></i><input type="email" placeholder="Alamat Email"></div>
+      <div class="field"><i class="fas fa-lock"></i><input type="password" placeholder="Password"></div>
+      <div style="text-align:right;margin-bottom:14px"><a style="font-size:12px;color:var(--teal);cursor:pointer">Lupa password?</a></div>
+      <button class="btn-masuk" onclick="doLogin()"><i class="fas fa-sign-in-alt"></i> Masuk ke Sistem</button>
+    </div>
+    <div id="authFormRegister" style="display:none">
+      <div class="field"><i class="fas fa-user"></i><input type="text" placeholder="Nama Lengkap"></div>
+      <div class="field"><i class="fas fa-envelope"></i><input type="email" placeholder="Alamat Email"></div>
+      <div class="field"><i class="fas fa-phone"></i><input type="tel" placeholder="Nomor WhatsApp (+62...)"></div>
+      <div class="field"><i class="fas fa-lock"></i><input type="password" placeholder="Buat Password"></div>
+      <button class="btn-masuk" onclick="doRegister()"><i class="fas fa-user-plus"></i> Daftar Sekarang</button>
+    </div>
+    <div class="modal-footer-txt"><a onclick="closeLogin()">← Kembali ke Beranda</a></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================
+   DATA
+============================================ */
+var infraPoints=[
+  {name:'RSUD Abdul Moeloek',sub:'Kesehatan',em:'🏥',lat:-5.397,lng:105.258,banjir:'Tinggi',bandang:'Sedang',longsor:'Rendah',indeks:72,col:'#dc2626',
+   alamat:'Jl. Dr. Rivai No.6, Rawa Laut, Bandar Lampung',tahun:1974,luas:'5.2 ha',kapasitas:'450 Tempat Tidur',kondisi:'Beroperasi Normal',
+   foto:'Foto5.jpeg',
+   riwayat:[{tgl:'Mar 2026',kejadian:'Banjir 60cm merendam UGD, pasien evakuasi ke lantai 2'},{tgl:'Jan 2025',kejadian:'Genangan 30cm, operasional terganggu 8 jam'},{tgl:'Feb 2024',kejadian:'Banjir bandang minor, sistem drainase kewalahan'}],
+   rekomen:'Peninggian lantai dasar UGD +80cm, pembangunan sistem drainase mandiri, instalasi tanggul semi-permanen sisi barat'},
+  {name:'PDAM Bandar Lampung',sub:'Sanitasi & Air',em:'💧',lat:-5.406,lng:105.254,banjir:'Tinggi',bandang:'Rendah',longsor:'Rendah',indeks:65,col:'#d97706',
+   alamat:'Jl. Kimaja No.8, Way Halim, Bandar Lampung',tahun:1980,luas:'3.8 ha',kapasitas:'1.200 L/detik',kondisi:'Beroperasi Normal',
+   foto:'Foto5.jpeg',
+   riwayat:[{tgl:'Apr 2026',kejadian:'Banjir kontaminasi sumber air, distribusi terhenti 2 hari'},{tgl:'Okt 2024',kejadian:'Genangan 50cm di area intake, produksi turun 30%'}],
+   rekomen:'Pemasangan sensor kualitas air otomatis, peningkatan proteksi intake, sistem cadangan distribusi alternatif'},
+  {name:'Pelabuhan Panjang',sub:'Transportasi',em:'🚢',lat:-5.455,lng:105.305,banjir:'Tinggi',bandang:'Sedang',longsor:'Rendah',indeks:82,col:'#dc2626',
+   alamat:'Jl. Yos Sudarso, Panjang, Bandar Lampung',tahun:1952,luas:'420 ha',kapasitas:'7.2 juta ton/tahun',kondisi:'Beroperasi Penuh',
+   foto:'Foto5.jpeg',
+   riwayat:[{tgl:'Mei 2026',kejadian:'Rob banjir, 3 dermaga tidak operasional 12 jam'},{tgl:'Jan 2025',kejadian:'Banjir bandang, jalur akses Jl. Soekarno Hatta terputus'},{tgl:'Nov 2023',kejadian:'Banjir rob paling parah, cargo senilai Rp 2M terdampak'}],
+   rekomen:'Penguatan tanggul pesisir +1.2m, sistem pompa banjir otomatis, elevasi jalur akses utama'},
+  {name:'Gardu Induk Rajabasa',sub:'Energi',em:'⚡',lat:-5.371,lng:105.244,banjir:'Sedang',bandang:'Tinggi',longsor:'Sedang',indeks:70,col:'#d97706',
+   alamat:'Jl. Trans Sumatera, Rajabasa, Bandar Lampung',tahun:1998,luas:'2.1 ha',kapasitas:'150 MVA',kondisi:'Beroperasi Normal',
+   foto:'Foto5.jpeg',
+   riwayat:[{tgl:'Apr 2026',kejadian:'Longsor minor, pagar pengaman rusak sepanjang 15m'},{tgl:'Okt 2023',kejadian:'Banjir bandang, sistem proteksi darurat diaktifkan'}],
+   rekomen:'Pembangunan retaining wall sisi barat 50m, drainase lereng, pengamanan kabel ground level'},
+  {name:'Stasiun Tanjung Karang',sub:'Transportasi',em:'🚂',lat:-5.412,lng:105.262,banjir:'Sedang',bandang:'Rendah',longsor:'Rendah',indeks:48,col:'#d97706',
+   alamat:'Jl. Kotaraja No.1, Tanjung Karang, Bandar Lampung',tahun:1914,luas:'4.2 ha',kapasitas:'12 perjalanan/hari',kondisi:'Beroperasi Normal',
+   foto:'Foto5.jpeg',
+   riwayat:[{tgl:'Mar 2025',kejadian:'Genangan ringan, operasional normal'},{tgl:'Jan 2024',kejadian:'Banjir 20cm di peron, jadwal terlambat 2 jam'}],
+   rekomen:'Peninggian peron +30cm, perbaikan saluran drainase, sistem pompa banjir stanby'},
+  {name:'SMAN 1 Bandar Lampung',sub:'Pendidikan',em:'🏫',lat:-5.396,lng:105.267,banjir:'Tinggi',bandang:'Rendah',longsor:'Rendah',indeks:55,col:'#d97706',
+   alamat:'Jl. Jend. Sudirman No.41, Bandar Lampung',tahun:1950,luas:'1.8 ha',kapasitas:'1.800 siswa',kondisi:'Beroperasi Normal',
+   foto:'Foto5.jpeg',
+   riwayat:[{tgl:'Feb 2026',kejadian:'Banjir, KBM diliburkan 2 hari'},{tgl:'Jan 2025',kejadian:'Genangan di lapangan, tidak mengganggu KBM'}],
+   rekomen:'Pembangunan kolam retensi 500m³, peninggian lantai bangunan utama +50cm'},
+  {name:'Kantor Gubernur Lampung',sub:'Pemerintahan',em:'🏛️',lat:-5.394,lng:105.261,banjir:'Sedang',bandang:'Rendah',longsor:'Rendah',indeks:42,col:'#0891b2',
+   alamat:'Jl. W.R. Monginsidi No.69, Bandar Lampung',tahun:1982,luas:'3.5 ha',kapasitas:'Pusat Koordinasi Provinsi',kondisi:'Beroperasi Normal',
+   foto:'Foto5.jpeg',
+   riwayat:[{tgl:'Des 2025',kejadian:'Genangan halaman, tidak mengganggu operasional'}],
+   rekomen:'Perbaikan saluran drainase kawasan, pemasangan paving berpori di area parkir'},
+  {name:'BTS Telkomsel Rajabasa',sub:'Komunikasi',em:'📡',lat:-5.370,lng:105.248,banjir:'Rendah',bandang:'Tinggi',longsor:'Tinggi',indeks:78,col:'#dc2626',
+   alamat:'Jl. Z.A. Pagar Alam, Rajabasa, Bandar Lampung',tahun:2005,luas:'0.1 ha',kapasitas:'45.000 pelanggan',kondisi:'Beroperasi Normal',
+   foto:'Foto5.jpeg',
+   riwayat:[{tgl:'Mei 2026',kejadian:'Longsor minor mengancam pondasi menara'},{tgl:'Feb 2024',kejadian:'Banjir bandang, sinyal terputus 4 jam'},{tgl:'Nov 2022',kejadian:'Longsor, kabel distribusi putus'}],
+   rekomen:'Sistem EWS longsoran otomatis, penguatan pondasi tiang pancang, jalur kabel redundan'}
+];
+
+var riskData={
+  rs:{title:'RSUD Abdul Moeloek',banjir:'TINGGI',bandang:'SEDANG',longsor:'RENDAH',indeks:72,col:'#dc2626'},
+  pdam:{title:'PDAM Bandar Lampung',banjir:'TINGGI',bandang:'RENDAH',longsor:'RENDAH',indeks:65,col:'#d97706'},
+  pelabuhan:{title:'Pelabuhan Panjang',banjir:'TINGGI',bandang:'SEDANG',longsor:'RENDAH',indeks:82,col:'#dc2626'},
+  gardu:{title:'Gardu Induk Rajabasa',banjir:'SEDANG',bandang:'TINGGI',longsor:'SEDANG',indeks:70,col:'#d97706'},
+  stasiun:{title:'Stasiun Tanjung Karang',banjir:'SEDANG',bandang:'RENDAH',longsor:'RENDAH',indeks:48,col:'#d97706'}
+};
+
+/* ============================================
+   NAVIGATION
+============================================ */
+function goPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nb-link').forEach(l=>l.classList.remove('active'));
+  var pMap={home:'pageHome',peta:'pagePeta',dashboard:'pageDashboard',analisis:'pageAnalisis',laporan:'pageLaporan',data:'pageData',tentang:'pageTentang'};
+  var nMap={home:'nl-home',peta:'nl-peta',dashboard:'nl-dashboard',analisis:'nl-analisis',laporan:'nl-laporan',data:'nl-data',tentang:'nl-tentang'};
+  var pg=document.getElementById(pMap[id]);
+  if(pg) pg.classList.add('active');
+  var nl=document.getElementById(nMap[id]);
+  if(nl) nl.classList.add('active');
+  window.scrollTo(0,0);
+  if(id==='peta' && !window.mapInitialized) initMap();
+}
+
+/* ============================================
+   MODALS
+============================================ */
+function openLogin(){document.getElementById('loginModal').classList.add('open');}
+function closeLogin(){document.getElementById('loginModal').classList.remove('open');}
+function doLogin(){closeLogin();showToast('Login berhasil. Selamat datang!');}
+function doRegister(){closeLogin();showToast('Akun berhasil didaftarkan! Cek email untuk verifikasi.','success');}
+function switchAuthTab(tab){
+  document.querySelectorAll('.at-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('atLogin').classList.toggle('active',tab==='login');
+  document.getElementById('atRegister').classList.toggle('active',tab==='register');
+  document.getElementById('authFormLogin').style.display=tab==='login'?'':'none';
+  document.getElementById('authFormRegister').style.display=tab==='register'?'':'none';
+}
+document.getElementById('loginModal').addEventListener('click',function(e){if(e.target===this)closeLogin();});
+document.getElementById('infraModal').addEventListener('click',function(e){if(e.target===this)closeInfraModal();});
+
+/* ============================================
+   PENTAHELIX
+============================================ */
+function switchPH(el,panelId){
+  document.querySelectorAll('.ph-item').forEach(i=>i.classList.remove('active'));
+  document.querySelectorAll('.ph-content').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  var panel=document.getElementById(panelId);
+  if(panel) panel.classList.add('active');
+}
+
+/* ============================================
+   TOAST
+============================================ */
+var toastTimer;
+function showToast(msg,type){
+  var el=document.getElementById('toast');
+  el.textContent=msg;
+  el.className='toast'+(type?' '+type:'');
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(function(){el.classList.remove('show');},3200);
+}
+
+/* ============================================
+   MAP INITIALIZATION
+============================================ */
+var map,layers={},currentBM;
+var distanceMeasuring=false;
+var distPoints=[];
+var distPolyline=null;
+var distMarkers=[];
+
+var basemaps={
+  osm:L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}),
+  satellite:L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}),
+  esri:L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:18}),
+  terrain:L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:18}),
+  topo:L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17}),
+  hybrid:L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19})
+};
+
+function initMap(){
+  if(window.mapInitialized) return;
+  window.mapInitialized=true;
+  map=L.map('mapMain',{center:[-5.42,105.26],zoom:13,zoomControl:true,attributionControl:true});
+  currentBM=basemaps.osm;
+  currentBM.addTo(map);
+
+  map.on('mousemove',function(e){
+    var z=map.getZoom();
+    var scale=Math.round(50000/Math.pow(2,z-12)).toLocaleString();
+    document.getElementById('coordBar').children[0].textContent='📍 '+e.latlng.lat.toFixed(5)+'°, '+e.latlng.lng.toFixed(5)+'°  ·  Zoom: '+z+'  ·  Skala 1:'+scale;
+  });
+
+  map.on('click',function(e){
+    if(distanceMeasuring){
+      distPoints.push(e.latlng);
+      var marker=L.circleMarker(e.latlng,{radius:5,color:'#c9880a',fillColor:'#c9880a',fillOpacity:1,weight:2}).addTo(map);
+      distMarkers.push(marker);
+      if(distPoints.length>=2){
+        if(distPolyline) map.removeLayer(distPolyline);
+        distPolyline=L.polyline(distPoints,{color:'#c9880a',weight:2.5,dashArray:'8,4'}).addTo(map);
+        var total=0;
+        for(var i=1;i<distPoints.length;i++){
+          total+=distPoints[i-1].distanceTo(distPoints[i]);
+        }
+        var distText=total>=1000?(total/1000).toFixed(3)+' km':total.toFixed(1)+' m';
+        document.getElementById('measureResult').textContent='⇒ '+distText;
+        document.getElementById('distResult').style.display='block';
+        document.getElementById('distResult').innerHTML='<i class="fas fa-ruler" style="margin-right:6px"></i>Jarak diukur: <strong>'+distText+'</strong> ('+distPoints.length+' titik)';
+        var mbSpan=document.querySelector('#measureBar span:nth-child(2)');
+        if(mbSpan) mbSpan.textContent='Klik untuk tambah titik — ';
+      }
+    }
+  });
+
+  addInfraMarkers();
+  addHazardLayers();
+  buildRiskMatrix();
+  buildRiskTable();
+}
+
+/* ============================================
+   HAZARD LAYERS — FROM GEOJSON FILES
+============================================ */
+
+/* Warna berdasarkan keterangan properti GeoJSON */
+function hazardColor(keterangan, type){
+  var k=(keterangan||'').toLowerCase();
+  if(k.includes('tinggi'))   return {fill:'#ef4444',stroke:'#dc2626'};
+  if(k.includes('sedang'))   return {fill:'#f97316',stroke:'#ea580c'};
+  if(k.includes('rendah'))   return {fill:'#3b82f6',stroke:'#2563eb'};
+  if(k.includes('tidak ada')) return {fill:'#d1d5db',stroke:'#9ca3af'};
+  // fallback per type
+  var defaults={banjir:{fill:'#3b82f6',stroke:'#2563eb'},bandang:{fill:'#1d4ed8',stroke:'#1e40af'},longsor:{fill:'#92400e',stroke:'#78350f'},cuaca:{fill:'#7c3aed',stroke:'#6d28d9'}};
+  return defaults[type]||{fill:'#6b7280',stroke:'#4b5563'};
+}
+
+/* Popup HTML builder */
+function makeHazardPopup(icon, title, props, source){
+  var ket=props.Keterangan||'-';
+  var col=hazardColor(ket, '');
+  return '<div style="font-family:IBM Plex Sans,sans-serif;min-width:190px;padding:4px 0">'
+    +'<div style="font-weight:700;font-size:13px;margin-bottom:8px;display:flex;align-items:center;gap:6px">'+icon+' '+title+'</div>'
+    +'<div style="font-size:12px;color:#374151;margin-bottom:4px"><b>Tingkat Bahaya:</b> <span style="font-weight:700;color:'+col.fill+'">'+ket+'</span></div>'
+    +'<div style="font-size:11px;color:#9ca3af;margin-top:6px;padding-top:6px;border-top:1px solid #f3f4f6">Sumber: '+source+'</div>'
+    +'</div>';
+}
+
+/* Load satu GeoJSON file, kembalikan sebagai L.layerGroup */
+function loadGeoJSONLayer(url, type, icon, title, source, callback){
+  var group=L.layerGroup();
+  fetch(url)
+    .then(function(r){
+      if(!r.ok) throw new Error('Gagal memuat '+url);
+      return r.json();
+    })
+    .then(function(data){
+      L.geoJSON(data,{
+        style:function(feature){
+          var ket=feature.properties&&feature.properties.Keterangan||'';
+          var c=hazardColor(ket,type);
+          return {color:c.stroke,fillColor:c.fill,fillOpacity:0.30,weight:1.5,opacity:0.85};
+        },
+        onEachFeature:function(feature,layer){
+          layer.bindPopup(makeHazardPopup(icon,title,feature.properties||{},source));
+          layer.on('mouseover',function(){layer.setStyle({fillOpacity:0.55,weight:2.5});});
+          layer.on('mouseout',function(){layer.setStyle({fillOpacity:0.30,weight:1.5});});
+        }
+      }).addTo(group);
+      if(callback) callback(group);
+    })
+    .catch(function(err){
+      console.warn('[SIGAP] GeoJSON gagal dimuat:',err.message);
+      showToast('⚠️ Layer '+title+' tidak ditemukan. Pastikan file GeoJSON ada di folder yang sama dengan HTML.','error');
+      if(callback) callback(group); // tetap lanjutkan meskipun error
+    });
+  return group;
+}
+
+function addHazardLayers(){
+  /* Nama file GeoJSON — letakkan di folder yang sama dengan SIGAP_v10.html */
+  var FILES={
+    banjir   :'Bahaya_Banjir_Fix.geojson',
+    bandang  :'Bahaya_BanjirBandang_Fix.geojson',
+    longsor  :'Bahaya_TanahLongsor_Fix.geojson',
+    cuaca    :'Bahaya_CuacaEkstream_Fix.geojson'
+  };
+
+  var pending=4; // jumlah layer yang akan di-load
+  function onLoaded(name,group){
+    layers[name]=group;
+    group.addTo(map);
+    pending--;
+    if(pending===0) showToast('✅ Semua layer bahaya berhasil dimuat dari GeoJSON');
+  }
+
+  loadGeoJSONLayer(FILES.banjir,  'banjir', '🌊','Zona Bahaya Banjir',    'BPBD Lampung 2026', function(g){onLoaded('banjir',g);});
+  loadGeoJSONLayer(FILES.bandang, 'bandang','💧','Zona Banjir Bandang',   'PVMBG 2026',         function(g){onLoaded('bandang',g);});
+  loadGeoJSONLayer(FILES.longsor, 'longsor','⛰️','Zona Tanah Longsor',    'PVMBG 2026',         function(g){onLoaded('longsor',g);});
+  loadGeoJSONLayer(FILES.cuaca,   'cuaca',  '🌧️','Zona Cuaca Ekstrem',   'BMKG Lampung 2026',  function(g){onLoaded('cuaca',g);});
+}
+
+/* ============================================
+   15 INFRASTRUKTUR GEOJSON LAYERS
+============================================ */
+var infraGeoJSONLayers = {};
+
+var infraGeoJSONConfig = [
+  {key:'RumahSakit',   file:'RumahSakit.geojson',       color:'#dc2626', icon:'🏥', label:'Rumah Sakit',    type:'point'},
+  {key:'Klinik',       file:'Klinik.geojson',            color:'#e11d48', icon:'🏪', label:'Klinik',         type:'point'},
+  {key:'pusekesmas',   file:'pusekesmas.geojson',        color:'#f43f5e', icon:'🏩', label:'Puskesmas',      type:'point'},
+  {key:'Pemerintahan', file:'Pemerintahan.geojson',      color:'#7c3aed', icon:'🏛️', label:'Pemerintahan',   type:'point'},
+  {key:'Pendidikan',   file:'Pendidikan.geojson',        color:'#4f46e5', icon:'🏫', label:'Pendidikan',     type:'point'},
+  {key:'TerminalBus',  file:'TerminalBus.geojson',       color:'#0891b2', icon:'🚌', label:'Terminal Bus',   type:'point'},
+  {key:'StasiunKA',    file:'StasiunKA.geojson',         color:'#0284c7', icon:'🚉', label:'Stasiun KA',     type:'point'},
+  {key:'RelKA',        file:'RelKA.geojson',             color:'#1d4ed8', icon:'🚂', label:'Rel KA',         type:'line'},
+  {key:'Pelabuhan',    file:'Pelabuhan.geojson',         color:'#0f766e', icon:'⚓', label:'Pelabuhan',      type:'point'},
+  {key:'KantorPLN',    file:'KantorPLN.geojson',         color:'#ea580c', icon:'🔌', label:'Kantor PLN',     type:'point'},
+  {key:'GarduListrik', file:'GarduListrik.geojson',      color:'#d97706', icon:'⚡', label:'Gardu Listrik',  type:'point'},
+  {key:'SPBU',         file:'SPBU.geojson',              color:'#ca8a04', icon:'⛽', label:'SPBU',           type:'point'},
+  {key:'MeanaraTelepon',file:'MeanaraTelepon.geojson',   color:'#64748b', icon:'📡', label:'Menara Telepon', type:'point'},
+  {key:'Jembatan',     file:'Jembatan.geojson',          color:'#374151', icon:'🌉', label:'Jembatan',       type:'line'},
+  {key:'Jalan',        file:'Jalan.geojson',             color:'#6b7280', icon:'🛣️', label:'Jalan',          type:'line'}
+];
+
+function makeInfraPopup(icon, label, props, color) {
+  var name = props.name || props.Name || props.NAMA || props.nama || props.OBJECTID || '-';
+  var rows = '';
+  var skip = ['name','Name','NAMA','nama','OBJECTID','geometry'];
+  Object.keys(props).forEach(function(k){
+    if(!skip.includes(k) && props[k] !== null && props[k] !== undefined && props[k] !== '') {
+      rows += '<div style="display:flex;gap:8px;padding:4px 0;border-bottom:1px solid #f3f4f6;font-size:11px"><span style="color:#6b7280;min-width:90px;font-family:IBM Plex Mono,monospace">'+k+'</span><span style="color:#111827;font-weight:500">'+props[k]+'</span></div>';
+    }
+  });
+  return '<div style="font-family:IBM Plex Sans,sans-serif;min-width:210px;max-width:270px">'
+    +'<div style="background:'+color+';color:white;padding:10px 12px;border-radius:6px 6px 0 0;font-weight:600;font-size:13px;display:flex;align-items:center;gap:7px">'+icon+' '+label+'</div>'
+    +'<div style="padding:10px 12px"><div style="font-size:13px;font-weight:600;color:#111827;margin-bottom:8px">'+name+'</div>'
+    +(rows ? '<div style="max-height:160px;overflow-y:auto">'+rows+'</div>' : '<div style="font-size:11px;color:#9ca3af">Tidak ada atribut tambahan.</div>')
+    +'</div></div>';
+}
+
+function loadInfraGeoJSONLayer(cfg) {
+  var group = L.layerGroup();
+  infraGeoJSONLayers[cfg.key] = group;
+  fetch(cfg.file)
+    .then(function(r){ if(!r.ok) throw new Error(cfg.file); return r.json(); })
+    .then(function(data){
+      L.geoJSON(data, {
+        style: function() {
+          return {color: cfg.color, weight: cfg.type==='line'?2:1.5, fillColor: cfg.color, fillOpacity: cfg.type==='line'?0:0.25, opacity: 0.85};
+        },
+        pointToLayer: function(feature, latlng) {
+          return L.circleMarker(latlng, {
+            radius: 6, fillColor: cfg.color, color: '#fff', weight: 1.5, fillOpacity: 0.85
+          });
+        },
+        onEachFeature: function(feature, layer) {
+          layer.bindPopup(makeInfraPopup(cfg.icon, cfg.label, feature.properties||{}, cfg.color));
+          if(cfg.type !== 'line') {
+            layer.on('mouseover', function(){ layer.setStyle({fillOpacity:1,radius:8}); });
+            layer.on('mouseout',  function(){ layer.setStyle({fillOpacity:0.85,radius:6}); });
+          }
+        }
+      }).addTo(group);
+      group.addTo(map);
+      console.log('[SIGAP] Layer '+cfg.label+' dimuat.');
+    })
+    .catch(function(err){
+      console.warn('[SIGAP] GeoJSON tidak ditemukan: '+err.message);
+    });
+}
+
+function addAllInfraGeoJSONLayers() {
+  infraGeoJSONConfig.forEach(function(cfg){ loadInfraGeoJSONLayer(cfg); });
+}
+
+function toggleInfraGeoJSON(key, on) {
+  var g = infraGeoJSONLayers[key];
+  if(!g) return;
+  if(on) g.addTo(map); else map.removeLayer(g);
+}
+
+
+var infraMarkers=[];
+function addInfraMarkers(){
+  var catColors={'Kesehatan':'#dc2626','Sanitasi & Air':'#0d9488','Transportasi':'#0891b2','Energi':'#ea580c','Pendidikan':'#4f46e5','Pemerintahan':'#7c3aed','Komunikasi':'#d97706'};
+  window.infraGroups={};
+  infraPoints.forEach(function(d){
+    var col=catColors[d.sub]||'#1a56db';
+    var riskRing=d.indeks>=70?'#dc2626':d.indeks>=40?'#d97706':'#059669';
+    var html='<div style="position:relative;width:34px;height:34px">'+
+      '<div style="position:absolute;inset:0;border-radius:50%;border:2.5px solid '+riskRing+';opacity:0.35;animation:pulse 2s ease-in-out infinite"></div>'+
+      '<div style="width:30px;height:30px;border-radius:50%;background:'+col+';border:2.5px solid white;box-shadow:0 2px 10px rgba(0,0,0,0.28);display:flex;align-items:center;justify-content:center;font-size:13px;position:absolute;top:2px;left:2px">'+d.em+'</div>'+
+    '</div>';
+    // CSS for pulse animation (inject once)
+    if(!window.pulseInjected){
+      window.pulseInjected=true;
+      var s=document.createElement('style');
+      s.textContent='@keyframes pulse{0%,100%{transform:scale(1);opacity:0.35}50%{transform:scale(1.5);opacity:0.1}}';
+      document.head.appendChild(s);
+    }
+    var icon=L.divIcon({html:html,className:'',iconSize:[34,34],iconAnchor:[17,17]});
+    var marker=L.marker([d.lat,d.lng],{icon:icon});
+    marker.on('click',function(){showInfraModal(d);});
+    marker.addTo(map);
+    infraMarkers.push({marker:marker,data:d,cat:d.sub});
+    if(!window.infraGroups[d.sub]) window.infraGroups[d.sub]=[];
+    window.infraGroups[d.sub].push(marker);
+  });
+}
+
+/* ============================================
+   DISTANCE MEASUREMENT
+============================================ */
+function activateDistance(){
+  distanceMeasuring=true;
+  distPoints=[];
+  distMarkers.forEach(function(m){map.removeLayer(m);});
+  distMarkers=[];
+  if(distPolyline){map.removeLayer(distPolyline);distPolyline=null;}
+  document.getElementById('measureBar').classList.add('visible');
+  document.getElementById('measureResult').textContent='';
+  document.getElementById('btn-distance').classList.add('active-tool');
+  document.getElementById('mapMain').style.cursor='crosshair';
+  showToast('Mode ukur jarak aktif — klik titik pertama di peta');
+}
+function deactivateDistance(){
+  distanceMeasuring=false;
+  document.getElementById('measureBar').classList.remove('visible');
+  document.getElementById('btn-distance').classList.remove('active-tool');
+  document.getElementById('mapMain').style.cursor='';
+  showToast('Mode ukur jarak dinonaktifkan');
+}
+
+/* ============================================
+   MAP CONTROLS
+============================================ */
+function toggleLyr(name,on){
+  if(layers[name]){
+    if(on) layers[name].addTo(map); else map.removeLayer(layers[name]);
+  }
+}
+function setOpacity(name,val){
+  if(layers[name]){
+    layers[name].eachLayer&&layers[name].eachLayer(function(l){
+      if(l.setStyle) l.setStyle({fillOpacity:val/200});
+    });
+    if(layers[name].setStyle) layers[name].setStyle({fillOpacity:val/200});
+  }
+}
+function switchBM(btn,name){
+  document.querySelectorAll('.bm-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(currentBM) map.removeLayer(currentBM);
+  currentBM=basemaps[name];
+  currentBM.addTo(map);
+}
+function resetMapView(){if(map) map.setView([-5.42,105.26],13);}
+function fullscreen(){var el=document.getElementById('mapMain');if(el.requestFullscreen) el.requestFullscreen();}
+function getGPS(){
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(function(pos){
+      document.getElementById('gpsLat').value=pos.coords.latitude.toFixed(6);
+      document.getElementById('gpsLng').value=pos.coords.longitude.toFixed(6);
+      if(map) map.setView([pos.coords.latitude,pos.coords.longitude],16);
+      showToast('Lokasi GPS ditemukan: '+pos.coords.latitude.toFixed(4)+'°, '+pos.coords.longitude.toFixed(4)+'°');
+    },function(){showToast('GPS tidak tersedia atau ditolak','error');});
+  } else showToast('Browser tidak mendukung geolocation','error');
+}
+function toolAction(t){
+  var msgs={area:'Alat ukur luas diaktifkan — klik titik batas area',buffer:'Alat buffer diaktifkan — klik titik pusat di peta',query:'Filter atribut diaktifkan',print:'Menyiapkan cetak peta PDF....',screenshot:'Mengambil screenshot peta...',download:'Mengunduh data layer aktif...'};
+  showToast(msgs[t]||t);
+}
+function searchInfra(q){
+  if(!q||q.length<2){showToast('Ketik minimal 2 karakter');return;}
+  var found=infraPoints.filter(function(d){return d.name.toLowerCase().includes(q.toLowerCase())||d.sub.toLowerCase().includes(q.toLowerCase());});
+  if(found.length&&map){
+    map.setView([found[0].lat,found[0].lng],16);
+    showToast('Menampilkan: '+found[0].name);
+  } else showToast('Tidak ditemukan: '+q,'error');
+}
+function mapSearch(q){
+  if(q.length>2) showToast('Mencari: '+q+' ...');
+}
+function filterHazard(type,level,btn){
+  document.querySelectorAll('[onclick*="filterHazard(\''+type+'\'"]').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  showToast('Filter '+type+': '+level);
+}
+function toggleInfraCategory(cat,on){
+  if(window.infraGroups&&window.infraGroups[cat]){
+    window.infraGroups[cat].forEach(function(m){
+      if(on) m.addTo(map); else map.removeLayer(m);
+    });
+  }
+}
+function filterByRisk(level){
+  document.querySelectorAll('#rfAll,#rfTinggi,#rfSedang,#rfRendah').forEach(b=>b.classList.remove('active'));
+  var btnMap={all:'rfAll',tinggi:'rfTinggi',sedang:'rfSedang',rendah:'rfRendah'};
+  if(btnMap[level]) document.getElementById(btnMap[level]).classList.add('active');
+  infraMarkers.forEach(function(item){
+    var d=item.data;
+    var show=false;
+    if(level==='all') show=true;
+    else if(level==='tinggi') show=d.indeks>=70;
+    else if(level==='sedang') show=d.indeks>=40&&d.indeks<70;
+    else if(level==='rendah') show=d.indeks<40;
+    if(show) item.marker.addTo(map); else map.removeLayer(item.marker);
+  });
+}
+
+/* ============================================
+   INFRA MODAL — RICH POPUP
+============================================ */
+function showInfraModal(d){
+  var bcol=d.indeks>=70?'#dc2626':d.indeks>=40?'#d97706':'#0891b2';
+  var blabel=d.indeks>=70?'TINGGI':d.indeks>=40?'SEDANG':'RENDAH';
+  var bgLabel=d.indeks>=70?'var(--red-light)':d.indeks>=40?'var(--orange-light)':'var(--green-light)';
+
+  function badgeHtml(level){
+    var c=level==='Tinggi'?'#dc2626':level==='Sedang'?'#d97706':'#059669';
+    var bg=level==='Tinggi'?'#fdecea':level==='Sedang'?'#fff1e6':'#ecfdf5';
+    return '<span style="font-size:10.5px;padding:2px 8px;border-radius:4px;font-weight:700;background:'+bg+';color:'+c+';font-family:IBM Plex Mono,monospace">'+level+'</span>';
+  }
+
+  var riwHTML=(d.riwayat||[]).map(function(r){
+    return '<div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid #f3f4f6">'+
+      '<div style="min-width:78px;font-size:10.5px;font-weight:700;color:var(--teal);padding-top:1px;font-family:IBM Plex Mono,monospace">'+r.tgl+'</div>'+
+      '<div style="font-size:12px;color:var(--ink)">'+r.kejadian+'</div></div>';
+  }).join('')||'<div style="font-size:12px;color:var(--muted);padding:8px 0">Belum ada riwayat kejadian.</div>';
+
+  var content=
+    '<div style="font-family:IBM Plex Sans,sans-serif">'+
+    // Header banner
+    '<div style="position:relative;height:130px;background:linear-gradient(135deg,'+d.col+'33,'+d.col+'11);margin-bottom:0;overflow:hidden;display:flex;align-items:center;justify-content:center">'+
+      '<div style="position:absolute;inset:0;background:linear-gradient(135deg,'+d.col+'55,rgba(0,0,0,0.4))"></div>'+
+      '<div style="position:relative;z-index:1;text-align:center">'+
+        '<div style="font-size:36px;margin-bottom:6px">'+d.em+'</div>'+
+        '<div style="font-size:16px;font-weight:700;color:white;text-shadow:0 1px 6px rgba(0,0,0,0.4);font-family:IBM Plex Serif,serif">'+d.name+'</div>'+
+        '<div style="font-size:11px;background:'+d.col+';color:white;padding:3px 12px;border-radius:12px;font-weight:700;margin-top:5px;display:inline-block;font-family:IBM Plex Mono,monospace">'+d.sub.toUpperCase()+'</div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="padding:18px 20px 6px">'+
+    // Risk score bar
+    '<div style="display:flex;align-items:center;gap:14px;padding:12px 14px;background:'+bgLabel+';border-radius:12px;border:1px solid '+bcol+'33;margin-bottom:14px">'+
+      '<svg width="52" height="52" viewBox="0 0 52 52" style="flex-shrink:0"><circle cx="26" cy="26" r="21" fill="none" stroke="#f3f4f6" stroke-width="5"/><circle cx="26" cy="26" r="21" fill="none" stroke="'+bcol+'" stroke-width="5" stroke-dasharray="'+2*Math.PI*21+'" stroke-dashoffset="'+2*Math.PI*21*(1-d.indeks/100)+'" stroke-linecap="round" transform="rotate(-90 26 26)"/><text x="26" y="30" text-anchor="middle" style="font-size:11px;font-weight:700;font-family:IBM Plex Serif,serif;fill:'+bcol+'">'+d.indeks+'%</text></svg>'+
+      '<div>'+
+        '<div style="font-size:11.5px;font-weight:700;color:var(--ink)">Indeks Risiko Komposit</div>'+
+        '<div style="font-size:13px;font-weight:700;color:'+bcol+';margin:2px 0">'+blabel+'</div>'+
+        '<div style="display:flex;gap:5px;margin-top:5px">'+
+          '🌊 '+badgeHtml(d.banjir)+
+          ' 💧 '+badgeHtml(d.bandang)+
+          ' ⛰️ '+badgeHtml(d.longsor)+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    // Tab nav
+    '<div style="display:flex;gap:0;border-bottom:2px solid var(--line);margin-bottom:14px" id="im-tabs">'+
+      '<button onclick="imTab(0)" id="im-t0" style="font-size:12px;padding:8px 14px;border:none;background:none;cursor:pointer;font-family:IBM Plex Sans,sans-serif;font-weight:700;color:var(--teal);border-bottom:2px solid var(--teal);margin-bottom:-2px"><i class="fas fa-circle-info" style="margin-right:4px"></i>Detail</button>'+
+      '<button onclick="imTab(1)" id="im-t1" style="font-size:12px;padding:8px 14px;border:none;background:none;cursor:pointer;font-family:IBM Plex Sans,sans-serif;font-weight:500;color:var(--muted)"><i class="fas fa-clock-rotate-left" style="margin-right:4px"></i>Riwayat</button>'+
+      '<button onclick="imTab(2)" id="im-t2" style="font-size:12px;padding:8px 14px;border:none;background:none;cursor:pointer;font-family:IBM Plex Sans,sans-serif;font-weight:500;color:var(--muted)"><i class="fas fa-shield-halved" style="margin-right:4px"></i>Mitigasi</button>'+
+    '</div>'+
+    // Panel 0: Detail
+    '<div id="im-p0">'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'+
+        '<div style="background:var(--bg);border-radius:9px;padding:10px;grid-column:1/-1"><div style="font-size:9.5px;font-weight:700;color:var(--teal);letter-spacing:1px;text-transform:uppercase;font-family:IBM Plex Mono,monospace;margin-bottom:3px">📍 Alamat</div><div style="font-size:12px;color:var(--ink);font-weight:500">'+(d.alamat||'—')+'</div></div>'+
+        '<div style="background:var(--bg);border-radius:9px;padding:10px"><div style="font-size:9.5px;font-weight:700;color:var(--teal);letter-spacing:1px;text-transform:uppercase;font-family:IBM Plex Mono,monospace;margin-bottom:3px">📅 Tahun Berdiri</div><div style="font-size:12px;color:var(--ink);font-weight:600">'+(d.tahun||'—')+'</div></div>'+
+        '<div style="background:var(--bg);border-radius:9px;padding:10px"><div style="font-size:9.5px;font-weight:700;color:var(--teal);letter-spacing:1px;text-transform:uppercase;font-family:IBM Plex Mono,monospace;margin-bottom:3px">📐 Luas Area</div><div style="font-size:12px;color:var(--ink);font-weight:600">'+(d.luas||'—')+'</div></div>'+
+        '<div style="background:var(--bg);border-radius:9px;padding:10px"><div style="font-size:9.5px;font-weight:700;color:var(--teal);letter-spacing:1px;text-transform:uppercase;font-family:IBM Plex Mono,monospace;margin-bottom:3px">⚙️ Kapasitas</div><div style="font-size:12px;color:var(--ink);font-weight:600">'+(d.kapasitas||'—')+'</div></div>'+
+        '<div style="background:var(--bg);border-radius:9px;padding:10px"><div style="font-size:9.5px;font-weight:700;color:var(--teal);letter-spacing:1px;text-transform:uppercase;font-family:IBM Plex Mono,monospace;margin-bottom:3px">🔢 Koordinat</div><div style="font-size:11px;color:var(--ink);font-family:IBM Plex Mono,monospace">'+d.lat+'°, '+d.lng+'°</div></div>'+
+        '<div style="background:'+(d.kondisi.includes('Penuh')||d.kondisi.includes('Normal')?'var(--green-light)':'var(--orange-light)')+';border-radius:9px;padding:10px"><div style="font-size:9.5px;font-weight:700;color:var(--teal);letter-spacing:1px;text-transform:uppercase;font-family:IBM Plex Mono,monospace;margin-bottom:3px">🔄 Kondisi</div><div style="font-size:12px;font-weight:700;color:'+(d.kondisi.includes('Penuh')||d.kondisi.includes('Normal')?'#059669':'#d97706')+'">'+(d.kondisi||'Normal')+'</div></div>'+
+      '</div>'+
+    '</div>'+
+    // Panel 1: Riwayat
+    '<div id="im-p1" style="display:none">'+
+      '<div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:8px">Riwayat Kejadian Bencana</div>'+
+      riwHTML+
+    '</div>'+
+    // Panel 2: Mitigasi
+    '<div id="im-p2" style="display:none">'+
+      '<div style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #a7f3d0;border-radius:12px;padding:14px;margin-bottom:12px">'+
+        '<div style="font-size:12px;font-weight:700;color:#065f46;margin-bottom:6px"><i class="fas fa-shield-halved" style="margin-right:6px"></i>Rekomendasi Mitigasi</div>'+
+        '<div style="font-size:12.5px;color:#047857;line-height:1.7">'+(d.rekomen||'Pantau kondisi secara berkala dan siapkan rencana kontinjensi.')+'</div>'+
+      '</div>'+
+      '<div style="background:var(--bg);border-radius:12px;padding:14px">'+
+        '<div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:10px;font-family:IBM Plex Mono,monospace">Profil Bahaya</div>'+
+        _riskBar('Banjir',d.banjir)+
+        _riskBar('Banjir Bandang',d.bandang)+
+        _riskBar('Tanah Longsor',d.longsor)+
+      '</div>'+
+    '</div>'+
+    // Actions
+    '<div style="display:flex;gap:7px;margin-top:14px">'+
+      '<button onclick="map.flyTo(['+d.lat+','+d.lng+'],17);closeInfraModal();showToast(\'Peta diarahkan ke '+d.name+'\')" style="flex:1;padding:9px;border-radius:9px;border:1.5px solid var(--teal);background:var(--teal-light);color:var(--teal);font-size:12px;font-weight:700;cursor:pointer;font-family:IBM Plex Sans,sans-serif"><i class="fas fa-map-marker-alt"></i> Ke Peta</button>'+
+      '<button onclick="showToast(\'Mencetak laporan '+d.name+'...\')" style="flex:1;padding:9px;border-radius:9px;border:1.5px solid var(--amber);background:var(--amber-light);color:var(--amber);font-size:12px;font-weight:700;cursor:pointer;font-family:IBM Plex Sans,sans-serif"><i class="fas fa-print"></i> Cetak</button>'+
+      '<button onclick="showToast(\'Mengunduh data '+d.name+'...\')" style="flex:1;padding:9px;border-radius:9px;border:1.5px solid var(--green);background:var(--green-light);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;font-family:IBM Plex Sans,sans-serif"><i class="fas fa-download"></i> Unduh</button>'+
+    '</div>'+
+    '</div></div>';
+
+  document.getElementById('infraModalContent').innerHTML=content;
+  document.getElementById('infraModal').classList.add('open');
+}
+
+function _riskBar(label,level){
+  var w=level==='Tinggi'?'90%':level==='Sedang'?'55%':'25%';
+  var col=level==='Tinggi'?'#dc2626':level==='Sedang'?'#d97706':'#059669';
+  return '<div style="margin-bottom:10px">'+
+    '<div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:4px">'+
+      '<span style="color:var(--ink);font-weight:500">'+label+'</span>'+
+      '<span style="font-weight:700;color:'+col+';font-family:IBM Plex Mono,monospace">'+level+'</span>'+
+    '</div>'+
+    '<div style="height:6px;background:#e5e7eb;border-radius:3px">'+
+      '<div style="height:6px;width:'+w+';background:'+col+';border-radius:3px;transition:width 0.6s ease"></div>'+
+    '</div></div>';
+}
+
+function imTab(n){
+  [0,1,2].forEach(function(i){
+    var p=document.getElementById('im-p'+i);
+    var t=document.getElementById('im-t'+i);
+    if(p) p.style.display=i===n?'':'none';
+    if(t){
+      t.style.color=i===n?'var(--teal)':'var(--muted)';
+      t.style.fontWeight=i===n?'700':'500';
+      t.style.borderBottom=i===n?'2px solid var(--teal)':'2px solid transparent';
+      t.style.marginBottom='-2px';
+    }
+  });
+}
+
+function closeInfraModal(){document.getElementById('infraModal').classList.remove('open');}
+
+/* ============================================
+   RISK DEMO & TABLE
+============================================ */
+function updateRiskDemo(val){
+  if(!val){document.getElementById('riskMeter').style.display='none';document.getElementById('riskLevels').style.display='none';return;}
+  var d=riskData[val];
+  document.getElementById('riskMeter').style.display='flex';
+  document.getElementById('riskLevels').style.display='grid';
+  var gauge=document.querySelector('.rm-gauge');
+  gauge.style.background='conic-gradient('+d.col+' 0% '+d.indeks+'%, #f3f4f6 '+d.indeks+'%)';
+  document.getElementById('rmVal').textContent=d.indeks+'%';
+  document.getElementById('rmVal').style.color=d.col;
+  document.getElementById('rmTitle').textContent=d.title;
+  document.getElementById('rmSub').innerHTML='Tingkat: <strong style="color:'+d.col+'">'+(d.indeks>=70?'Tinggi':d.indeks>=40?'Sedang':'Rendah')+'</strong> · Skor: '+d.indeks+'/100';
+  document.getElementById('rl-banjir').textContent=d.banjir;
+  document.getElementById('rl-bandang').textContent=d.bandang;
+  document.getElementById('rl-longsor').textContent=d.longsor;
+}
+
+function buildRiskMatrix(){
+  var el=document.getElementById('riskMatrix');
+  if(!el) return;
+  var cells=[
+    ['#16a34a','#16a34a','#d97706','#dc2626','#dc2626'],
+    ['#16a34a','#16a34a','#d97706','#dc2626','#dc2626'],
+    ['#16a34a','#d97706','#d97706','#dc2626','#dc2626'],
+    ['#16a34a','#d97706','#d97706','#d97706','#dc2626'],
+    ['#16a34a','#16a34a','#d97706','#d97706','#d97706']
+  ];
+  var labels=['1','2','3','4','5'];
+  el.innerHTML='';
+  for(var r=0;r<5;r++){
+    for(var c=0;c<5;c++){
+      var cell=document.createElement('div');
+      cell.style.cssText='padding:10px 4px;text-align:center;border-radius:6px;background:'+cells[r][c]+'22;border:1px solid '+cells[r][c]+'44;font-size:11px;font-weight:700;color:'+cells[r][c]+';font-family:IBM Plex Mono,monospace;cursor:default';
+      cell.textContent=labels[r]+'×'+labels[c];
+      el.appendChild(cell);
+    }
+  }
+}
+
+function buildRiskTable(){
+  var el=document.getElementById('riskTable');
+  if(!el) return;
+  var rows=infraPoints.map(function(d){
+    var bc=d.indeks>=70?'var(--red)':d.indeks>=40?'var(--orange)':'var(--green)';
+    var bg=d.indeks>=70?'var(--red-light)':d.indeks>=40?'var(--orange-light)':'var(--green-light)';
+    var bf=function(lv){return lv==='Tinggi'?'color:#dc2626;font-weight:700':lv==='Sedang'?'color:#d97706;font-weight:700':'color:#059669;font-weight:700';};
+    return '<tr style="border-bottom:1px solid var(--line2)">'+
+      '<td style="padding:10px 8px;font-size:12px;font-weight:600;color:var(--ink)">'+d.em+' '+d.name+'</td>'+
+      '<td style="padding:10px 4px;font-size:11px;color:var(--muted);font-family:IBM Plex Mono,monospace">'+d.sub+'</td>'+
+      '<td style="padding:10px 4px;font-size:11px;'+bf(d.banjir)+'">'+d.banjir+'</td>'+
+      '<td style="padding:10px 4px;font-size:11px;'+bf(d.bandang)+'">'+d.bandang+'</td>'+
+      '<td style="padding:10px 4px;font-size:11px;'+bf(d.longsor)+'">'+d.longsor+'</td>'+
+      '<td style="padding:10px 6px;"><span style="font-size:11px;font-weight:700;background:'+bg+';color:'+bc+';padding:3px 9px;border-radius:5px;font-family:IBM Plex Mono,monospace">'+d.indeks+'%</span></td>'+
+    '</tr>';
+  }).join('');
+  el.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'+
+    '<thead><tr style="background:var(--bg)">'+
+    '<th style="padding:10px 8px;font-size:10px;font-weight:700;color:var(--muted);text-align:left;font-family:IBM Plex Mono,monospace;text-transform:uppercase;letter-spacing:1px">Infrastruktur</th>'+
+    '<th style="padding:10px 4px;font-size:10px;font-weight:700;color:var(--muted);text-align:left;font-family:IBM Plex Mono,monospace;text-transform:uppercase;letter-spacing:1px">Kategori</th>'+
+    '<th style="padding:10px 4px;font-size:10px;font-weight:700;color:var(--muted);text-align:left;font-family:IBM Plex Mono,monospace;text-transform:uppercase">Banjir</th>'+
+    '<th style="padding:10px 4px;font-size:10px;font-weight:700;color:var(--muted);text-align:left;font-family:IBM Plex Mono,monospace;text-transform:uppercase">Bandang</th>'+
+    '<th style="padding:10px 4px;font-size:10px;font-weight:700;color:var(--muted);text-align:left;font-family:IBM Plex Mono,monospace;text-transform:uppercase">Longsor</th>'+
+    '<th style="padding:10px 6px;font-size:10px;font-weight:700;color:var(--muted);text-align:left;font-family:IBM Plex Mono,monospace;text-transform:uppercase">Indeks</th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+
+/* ============================================
+   LAPORAN
+============================================ */
+var laporanSample=[
+  {em:'🌊',cat:'Banjir',title:'Banjir Kiriman — Kec. Panjang',loc:'Kel. Way Lunik',time:'2 jam lalu',desc:'Ketinggian air ±120cm merendam 3 RT. Warga diminta evakuasi ke posko SDN 3.',status:'verified'},
+  {em:'⛰️',cat:'Longsor',title:'Pergerakan Tanah — Kec. Kemiling',loc:'Kel. Beringin Raya',time:'5 jam lalu',desc:'Retakan tanah sepanjang ~15m. Tim BPBD melakukan asesmen lapangan.',status:'pending'},
+  {em:'💧',cat:'Banjir Bandang',title:'Potensi Banjir Bandang — Rajabasa',loc:'Kel. Rajabasa',time:'12 jam lalu',desc:'Intensitas hujan tinggi >100mm/24j. Warga dihimbau siap evakuasi.',status:'verified'},
+  {em:'🌊',cat:'Banjir',title:'Genangan Jalan Sukarame',loc:'Kec. Sukarame',time:'1 hari lalu',desc:'Genangan 30–50cm akibat drainase tersumbat sampah.',status:'pending'}
+];
+function buildLaporanList(){
+  var el=document.getElementById('laporanList');
+  if(!el) return;
+  el.innerHTML=laporanSample.map(function(d){
+    var st=d.status==='verified'?'<span class="st-verified">✓ Diverifikasi</span>':'<span class="st-pending">⏳ Menunggu</span>';
+    var bg=d.cat==='Banjir'?'#eff6ff':d.cat==='Longsor'?'#fef3c7':'#f0f9ff';
+    return '<div class="lap-card"><div class="lap-icon" style="background:'+bg+'">'+d.em+'</div><div class="lap-body"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div class="lap-title">'+d.title+'</div>'+st+'</div><div class="lap-meta"><span>📍 '+d.loc+'</span><span>'+d.time+'</span></div><div class="lap-desc">'+d.desc+'</div></div></div>';
+  }).join('');
+}
+function submitLaporan(){showToast('Laporan berhasil dikirim! Akan diverifikasi tim BPBD.','success');}
+
+/* ============================================
+   DATASETS
+============================================ */
+var datasets=[
+  {em:'🌊',name:'Layer Bahaya Banjir Provinsi Lampung',meta:'GeoJSON · PostGIS · Update: Jan 2026 · BPBD Lampung',bg:'#eff6ff',formats:['CSV','GeoJSON','SHP']},
+  {em:'💧',name:'Layer Bahaya Banjir Bandang',meta:'GeoJSON · PostGIS · Update: Jan 2026 · PVMBG',bg:'#f0f9ff',formats:['CSV','GeoJSON','SHP']},
+  {em:'⛰️',name:'Layer Bahaya Tanah Longsor',meta:'GeoJSON · PostGIS · Update: Jan 2026 · PVMBG',bg:'#fef3c7',formats:['CSV','GeoJSON','SHP']},
+  {em:'🏗️',name:'Database Infrastruktur Kritis (248 Obj.)',meta:'CSV · PostGIS · Update: Feb 2026 · Tim SIGAP',bg:'#f5f3ff',formats:['CSV','GeoJSON','SHP']},
+  {em:'📊',name:'Statistik Dampak Bencana 2026',meta:'CSV · Excel · Update: Real-time · Tim SIGAP',bg:'#ecfdf5',formats:['CSV']},
+  {em:'🌧️',name:'Curah Hujan Ekstrem BMKG Lampung',meta:'CSV · NetCDF · Update: Harian · BMKG Lampung',bg:'#eff6ff',formats:['CSV']},
+  {em:'💦',name:'Data Pos Duga Air (PDA)',meta:'JSON · Update: Real-time · BWSS VIII',bg:'#f0f9ff',formats:['CSV','GeoJSON']},
+  {em:'📸',name:'Laporan Foto Kejadian Terverifikasi',meta:'ZIP · JPEG · Update: Real-time · Masyarakat',bg:'#fef2f2',formats:['ZIP']}
+];
+function buildDatasets(){
+  var el=document.getElementById('datasetList');
+  if(!el) return;
+  el.innerHTML=datasets.map(function(d){
+    var btns=d.formats.map(function(f){
+      var cls=f==='CSV'?'ds-csv':f==='SHP'?'ds-shp':'ds-geojson';
+      return '<button class="ds-btn '+cls+'" onclick="showToast(\'Mengunduh '+d.name+' ('+f+')...\')" title="Unduh '+f+'"><i class="fas fa-download" style="font-size:10px"></i> '+f+'</button>';
+    }).join('');
+    return '<div class="dataset-card"><div class="ds-icon" style="background:'+d.bg+'">'+d.em+'</div><div class="ds-body"><div class="ds-name">'+d.name+'</div><div class="ds-meta">'+d.meta+'</div></div><div class="ds-actions">'+btns+'</div></div>';
+  }).join('');
+}
+
+/* ============================================
+   CHARTS
+============================================ */
+var chartsInitialized=false;
+function initCharts(){
+  if(chartsInitialized) return;
+  chartsInitialized=true;
+
+  var cf={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}};
+  var teal='rgba(11,122,138,1)';
+  var tealA='rgba(11,122,138,0.15)';
+
+  // Home kerusakan bar
+  var k=document.getElementById('chartKerusakan');
+  if(k) new Chart(k,{type:'bar',data:{
+    labels:['Tk.Betung U','Tk.Betung S','Kemiling','Rajabasa','Panjang','Sukarame','Kedaton','Tanjung K'],
+    datasets:[{label:'Rusak Berat',data:[820,640,380,290,740,210,180,360],backgroundColor:'rgba(194,59,42,0.8)',borderRadius:5},{label:'Rusak Sedang',data:[430,320,210,180,380,150,120,240],backgroundColor:'rgba(217,104,32,0.7)',borderRadius:5},{label:'Rusak Ringan',data:[310,280,160,140,290,120,100,180],backgroundColor:'rgba(11,122,138,0.7)',borderRadius:5}]
+  },options:{...cf,plugins:{legend:{display:true,position:'bottom',labels:{font:{family:'IBM Plex Sans',size:10},boxWidth:10,padding:12}}},scales:{x:{ticks:{font:{family:'IBM Plex Sans',size:10}},stacked:true},y:{ticks:{font:{family:'IBM Plex Mono',size:10}},stacked:true,grid:{color:'rgba(0,0,0,0.04)'}}}}});
+
+  // Dashboard area
+  var dd=document.getElementById('chartDashboard');
+  if(dd) new Chart(dd,{type:'bar',data:{
+    labels:['Tk.Betung U','Tk.Betung S','Kemiling','Rajabasa','Panjang','Sukarame'],
+    datasets:[{label:'Kejadian',data:[18,14,11,16,22,9],backgroundColor:teal,borderRadius:6},{label:'Infrastruktur Terdampak',data:[32,28,19,24,41,15],backgroundColor:'rgba(201,136,10,0.7)',borderRadius:6}]
+  },options:{...cf,plugins:{legend:{display:true,position:'bottom',labels:{font:{family:'IBM Plex Sans',size:10},boxWidth:10}}},scales:{x:{ticks:{font:{family:'IBM Plex Sans',size:10}}},y:{ticks:{font:{family:'IBM Plex Mono',size:10}},grid:{color:'rgba(0,0,0,0.04)'}}}}});
+
+  // Dashboard trend line
+  var dt=document.getElementById('chartTren');
+  if(dt) new Chart(dt,{type:'line',data:{
+    labels:['2020','2021','2022','2023','2024','2025','2026'],
+    datasets:[{label:'Banjir',data:[12,18,15,22,19,28,23],borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.08)',tension:0.4,fill:true,borderWidth:2.5},{label:'Longsor',data:[4,6,5,8,9,12,11],borderColor:'#92400e',backgroundColor:'rgba(146,64,14,0.08)',tension:0.4,fill:true,borderWidth:2.5}]
+  },options:{...cf,plugins:{legend:{display:true,position:'bottom',labels:{font:{family:'IBM Plex Sans',size:10},boxWidth:10}}},scales:{x:{ticks:{font:{family:'IBM Plex Sans',size:10}}},y:{ticks:{font:{family:'IBM Plex Mono',size:10}},grid:{color:'rgba(0,0,0,0.04)'}}}}});
+
+  // Dashboard pie
+  var dp=document.getElementById('chartRiskPie');
+  if(dp) new Chart(dp,{type:'doughnut',data:{
+    labels:['Risiko Tinggi (≥70)','Risiko Sedang (40–69)','Risiko Rendah (<40)'],
+    datasets:[{data:[38,45,17],backgroundColor:['rgba(194,59,42,0.85)','rgba(217,104,32,0.8)','rgba(11,122,90,0.8)'],borderWidth:0,hoverOffset:6}]
+  },options:{...cf,cutout:'65%',plugins:{legend:{display:true,position:'bottom',labels:{font:{family:'IBM Plex Sans',size:10},boxWidth:10,padding:10}}}}});
+
+  // Dashboard GEDSI
+  var dg=document.getElementById('chartGEDSI');
+  if(dg) new Chart(dg,{type:'radar',data:{
+    labels:['Balita','Anak-anak','Lansia','Ibu Hamil','Disabilitas'],
+    datasets:[{label:'Terdampak',data:[363,524,366,28,31],backgroundColor:'rgba(11,122,138,0.15)',borderColor:teal,borderWidth:2,pointBackgroundColor:teal,pointRadius:4}]
+  },options:{...cf,scales:{r:{ticks:{font:{family:'IBM Plex Mono',size:9}},grid:{color:'rgba(0,0,0,0.06)'},pointLabels:{font:{family:'IBM Plex Sans',size:10}}}},plugins:{legend:{display:false}}}});
+}
+
+/* ============================================
+   INIT
+============================================ */
+window.addEventListener('load',function(){
+  setTimeout(function(){
+    var loader=document.getElementById('loader');
+    loader.classList.add('out');
+    setTimeout(function(){loader.style.display='none';},500);
+    initCharts();
+    buildRiskTable();
+    buildLaporanList();
+    buildDatasets();
+  },1500);
+});
+</script>
+</body>
+</html>
