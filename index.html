@@ -1220,7 +1220,7 @@ footer{
       <div class="ws-sec">
         <div class="ws-sec-header">
           <div class="ws-sec-label">🗂️ Infrastruktur GeoJSON</div>
-          <div class="ws-sec-count">15 layer</div>
+          <div class="ws-sec-count">17 layer</div>
         </div>
         <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#dc2626"></div><span class="lyr-name">🏥 Rumah Sakit</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraGeoJSON('RumahSakit',this.checked)"><div class="tog-track"></div></label></div>
         <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#e11d48"></div><span class="lyr-name">🏪 Klinik</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraGeoJSON('Klinik',this.checked)"><div class="tog-track"></div></label></div>
@@ -1237,8 +1237,10 @@ footer{
         <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#64748b"></div><span class="lyr-name">📡 Menara Telepon</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraGeoJSON('MeanaraTelepon',this.checked)"><div class="tog-track"></div></label></div>
         <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#374151"></div><span class="lyr-name">🌉 Jembatan</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraGeoJSON('Jembatan',this.checked)"><div class="tog-track"></div></label></div>
         <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#6b7280"></div><span class="lyr-name">🛣️ Jalan</span></div><label class="tog"><input type="checkbox" onchange="toggleInfraGeoJSON('Jalan',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#0d9488"></div><span class="lyr-name">💧 PDAM</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraGeoJSON('PDAM',this.checked)"><div class="tog-track"></div></label></div>
+        <div class="lyr-row"><div class="lyr-left"><div class="lyr-dot" style="background:#b45309"></div><span class="lyr-name">⛽ SPBU (Fix)</span></div><label class="tog"><input type="checkbox" checked onchange="toggleInfraGeoJSON('SPBU_FIX',this.checked)"><div class="tog-track"></div></label></div>
         <div style="font-size:10px;color:var(--teal-dark);font-family:'IBM Plex Mono',monospace;margin-top:8px;padding:6px 8px;background:var(--teal-light);border-radius:5px">
-          <i class="fas fa-file-code" style="margin-right:4px"></i>Letakkan file .geojson di folder yang sama dengan HTML
+          <i class="fas fa-file-code" style="margin-right:4px"></i>Letakkan 17 file .geojson di folder yang sama dengan HTML ini
         </div>
       </div>
 
@@ -1343,7 +1345,7 @@ footer{
           <div class="legend-sec-label">🏗️ Infrastruktur Kritis</div>
           <div class="legend-row"><div class="legend-swatch circle" style="background:#dc2626"></div><div class="legend-key">Kesehatan</div></div>
           <div class="legend-row"><div class="legend-swatch circle" style="background:#0891b2"></div><div class="legend-key">Transportasi</div></div>
-          <div class="legend-row"><div class="legend-swatch circle" style="background:#0d9488"></div><div class="legend-key">Sanitasi &amp; Air</div></div>
+          <div class="legend-row"><div class="legend-swatch circle" style="background:#0d9488"></div><div class="legend-key">Sanitasi &amp; Air / PDAM</div></div>
           <div class="legend-row"><div class="legend-swatch circle" style="background:#ea580c"></div><div class="legend-key">Energi</div></div>
           <div class="legend-row"><div class="legend-swatch circle" style="background:#7c3aed"></div><div class="legend-key">Pemerintahan</div></div>
           <div class="legend-row"><div class="legend-swatch circle" style="background:#4f46e5"></div><div class="legend-key">Pendidikan</div></div>
@@ -1911,6 +1913,7 @@ function initMap(){
 
   addInfraMarkers();
   addHazardLayers();
+  addAllInfraGeoJSONLayers();
   buildRiskMatrix();
   buildRiskTable();
 }
@@ -2016,7 +2019,9 @@ var infraGeoJSONConfig = [
   {key:'SPBU',         file:'SPBU.geojson',              color:'#ca8a04', icon:'⛽', label:'SPBU',           type:'point'},
   {key:'MeanaraTelepon',file:'MeanaraTelepon.geojson',   color:'#64748b', icon:'📡', label:'Menara Telepon', type:'point'},
   {key:'Jembatan',     file:'Jembatan.geojson',          color:'#374151', icon:'🌉', label:'Jembatan',       type:'line'},
-  {key:'Jalan',        file:'Jalan.geojson',             color:'#6b7280', icon:'🛣️', label:'Jalan',          type:'line'}
+  {key:'Jalan',        file:'Jalan.geojson',             color:'#6b7280', icon:'🛣️', label:'Jalan',          type:'line'},
+  {key:'PDAM',         file:'PDAM.geojson',              color:'#0d9488', icon:'💧', label:'PDAM',            type:'point'},
+  {key:'SPBU_FIX',     file:'SPBU FIX.geojson',          color:'#b45309', icon:'⛽', label:'SPBU (Fix)',       type:'point'}
 ];
 
 function makeInfraPopup(icon, label, props, color) {
@@ -2038,6 +2043,19 @@ function makeInfraPopup(icon, label, props, color) {
 function loadInfraGeoJSONLayer(cfg) {
   var group = L.layerGroup();
   infraGeoJSONLayers[cfg.key] = group;
+
+  // Map layer key → category untuk sinkronisasi dengan toggleInfraCategory
+  var keyCatMap = {
+    RumahSakit:'Kesehatan', Klinik:'Kesehatan', pusekesmas:'Kesehatan',
+    Pemerintahan:'Pemerintahan', Pendidikan:'Pendidikan',
+    TerminalBus:'Transportasi', StasiunKA:'Transportasi', RelKA:'Transportasi',
+    Pelabuhan:'Transportasi', Jembatan:'Transportasi', Jalan:'Transportasi',
+    KantorPLN:'Energi', GarduListrik:'Energi', SPBU:'Energi', SPBU_FIX:'Energi',
+    MeanaraTelepon:'Komunikasi',
+    PDAM:'Sanitasi & Air'
+  };
+  var cat = keyCatMap[cfg.key] || null;
+
   fetch(cfg.file)
     .then(function(r){ if(!r.ok) throw new Error(cfg.file); return r.json(); })
     .then(function(data){
@@ -2055,6 +2073,12 @@ function loadInfraGeoJSONLayer(cfg) {
           if(cfg.type !== 'line') {
             layer.on('mouseover', function(){ layer.setStyle({fillOpacity:1,radius:8}); });
             layer.on('mouseout',  function(){ layer.setStyle({fillOpacity:0.85,radius:6}); });
+          }
+          // Daftarkan ke infraGroups agar toggle kategori berfungsi
+          if(cat) {
+            if(!window.infraGroups) window.infraGroups = {};
+            if(!window.infraGroups[cat]) window.infraGroups[cat] = [];
+            window.infraGroups[cat].push(layer);
           }
         }
       }).addTo(group);
